@@ -1,5 +1,5 @@
 [package]
-name = "sekien-pandoc"
+name = "gazu"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.76"
@@ -7,7 +7,7 @@ description = "Pandoc filter: converts Mermaid code blocks to SVG via sekien"
 license = "MIT OR Apache-2.0"
 
 [[bin]]
-name = "sekien-pandoc"
+name = "gazu"
 path = "src/main.rs"
 
 [dependencies]

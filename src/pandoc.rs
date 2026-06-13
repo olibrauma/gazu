@@ -1,10 +1,45 @@
 use crate::renderer::{self, BlockOutcome};
 use anyhow::{Context, Result};
 use serde_json::{json, Value};
+use std::hash::{Hash, Hasher};
 use std::io::{self, Write};
+use std::path::Path;
 
-/// Pandoc AST JSON を受け取り、Mermaid ブロックを SVG の RawBlock に置換して stdout に書く。
-pub fn filter(input: &str) -> Result<()> {
+/// `RawBlock("html", svg)` を素通り (またはフォーマット独自の raw-html 構文に
+/// 変換) して出力するフォーマット。これら以外 (typst, latex 等) では SVG を
+/// ファイルに書き出し `Image` に変換する。
+///
+/// `util/check-html-formats.sh` の実測結果 (pandoc 3.7)。pandoc のバージョンを
+/// 上げたときはこのスクリプトを再実行し、リストを見直すこと。
+/// `chunkedhtml` はマルチファイル writer (`-o <directory>` 必須) のため
+/// このスクリプトでは検証できず対象外。
+const HTML_FORMATS: &[&str] = &[
+    "html",
+    "html4",
+    "html5",
+    "s5",
+    "slidy",
+    "slideous",
+    "dzslides",
+    "revealjs",
+    "markdown",
+    "markdown_github",
+    "markdown_mmd",
+    "markdown_phpextra",
+    "markdown_strict",
+    "commonmark",
+    "commonmark_x",
+    "gfm",
+    "org",
+    "rst",
+    "mediawiki",
+    "muse",
+    "textile",
+    "docbook4",
+];
+
+/// Pandoc AST JSON を受け取り、Mermaid ブロックを `format` に応じた表現に置換して stdout に書く。
+pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()> {
     let mut ast: Value = serde_json::from_str(input).context("invalid Pandoc AST")?;
 
     let blocks_mut = ast["blocks"]
@@ -18,8 +53,8 @@ pub fn filter(input: &str) -> Result<()> {
     }
 
     let diagrams = mermaid_blocks.iter().map(|b| mermaid_source(b)).collect();
-    let outcomes = renderer::render_blocks(diagrams)?;
-    for warning in apply_outcomes(mermaid_blocks, outcomes) {
+    let outcomes = renderer::render_blocks(diagrams, config_json)?;
+    for warning in apply_outcomes(Path::new("."), format, mermaid_blocks, outcomes)? {
         eprintln!("{warning}");
     }
 
@@ -53,25 +88,57 @@ fn mermaid_source(block: &Value) -> String {
 
 /// `collect_mermaid_mut` で収集したブロックに `outcomes` を `1:1` で適用する。
 ///
-/// 成功したブロックは `RawBlock("html", svg)` に置換する。失敗したブロックは
+/// 成功したブロックは `format` が raw HTML を素通りするものなら
+/// `RawBlock("html", svg)` に、それ以外 (typst, latex 等) なら SVG を `dir`
+/// にファイルとして書き出し `Para[Image]` に置換する。失敗したブロックは
 /// 元の `CodeBlock` をそのまま残し、警告メッセージを返り値に積む（呼び出し側で
 /// 出力する）。
-fn apply_outcomes(blocks: Vec<&mut Value>, outcomes: Vec<BlockOutcome>) -> Vec<String> {
-    blocks
-        .into_iter()
-        .zip(outcomes)
-        .enumerate()
-        .filter_map(|(i, (block, outcome))| match outcome {
+fn apply_outcomes(
+    dir: &Path,
+    format: &str,
+    blocks: Vec<&mut Value>,
+    outcomes: Vec<BlockOutcome>,
+) -> Result<Vec<String>> {
+    let raw_html_ok = HTML_FORMATS.contains(&format);
+    let mut warnings = Vec::new();
+    for (i, (block, outcome)) in blocks.into_iter().zip(outcomes).enumerate() {
+        match outcome {
             BlockOutcome::Rendered(svg) => {
-                *block = json!({ "t": "RawBlock", "c": ["html", svg] });
-                None
+                *block = if raw_html_ok {
+                    json!({ "t": "RawBlock", "c": ["html", svg] })
+                } else {
+                    image_block(dir, &svg)?
+                };
             }
-            BlockOutcome::Failed(err) => Some(format!(
-                "warning: sekien-pandoc: mermaid block {} failed to render: {err}",
+            BlockOutcome::Failed(err) => warnings.push(format!(
+                "warning: gazu: mermaid block {} failed to render: {err}",
                 i + 1
             )),
-        })
-        .collect()
+        }
+    }
+    Ok(warnings)
+}
+
+/// `svg` を `dir` にファイルとして書き出し、それを参照する `Para[Image]`
+/// ブロックを返す。
+///
+/// raw HTML を素通りしない出力フォーマット (typst, latex 等) では SVG を
+/// インライン埋め込みできないため、ファイル経由の `Image` ノードに変換する。
+/// `dir` は呼び出し元 (pandoc) のカレントディレクトリと一致させる必要がある
+/// （typst 等はファイルパスを自身の root = pandoc の CWD 基準で解決するため）。
+/// pandoc は filter 終了後の生成フェーズでファイルを読むため、ここで削除はできない。
+fn image_block(dir: &Path, svg: &str) -> Result<Value> {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    svg.hash(&mut hasher);
+    let filename = format!("gazu-{:016x}.svg", hasher.finish());
+
+    std::fs::write(dir.join(&filename), svg)
+        .with_context(|| format!("failed to write {filename}"))?;
+
+    Ok(json!({
+        "t": "Para",
+        "c": [{ "t": "Image", "c": [["", [], []], [], [filename, ""]] }]
+    }))
 }
 
 fn is_mermaid_block(block: &Value) -> bool {
@@ -85,27 +152,23 @@ fn is_mermaid_block(block: &Value) -> bool {
 fn nested_mut(block: &mut Value) -> Vec<&mut Vec<Value>> {
     match block["t"].as_str() {
         // Div:          c = [Attr, [Block]]
-        Some("Div") => block["c"][1]
-            .as_array_mut()
-            .map(|v| vec![v])
-            .unwrap_or_default(),
+        Some("Div") => block["c"][1].as_array_mut().into_iter().collect(),
         // BlockQuote:   c = [Block]
-        Some("BlockQuote") => block["c"]
-            .as_array_mut()
-            .map(|v| vec![v])
-            .unwrap_or_default(),
+        Some("BlockQuote") => block["c"].as_array_mut().into_iter().collect(),
         // BulletList:   c = [[Block]]
-        Some("BulletList") => block["c"]
-            .as_array_mut()
-            .map(|items| items.iter_mut().filter_map(|i| i.as_array_mut()).collect())
-            .unwrap_or_default(),
+        Some("BulletList") => list_items_mut(block["c"].as_array_mut()),
         // OrderedList:  c = [ListAttrs, [[Block]]]
-        Some("OrderedList") => block["c"][1]
-            .as_array_mut()
-            .map(|items| items.iter_mut().filter_map(|i| i.as_array_mut()).collect())
-            .unwrap_or_default(),
+        Some("OrderedList") => list_items_mut(block["c"][1].as_array_mut()),
         _ => vec![],
     }
+}
+
+/// `[[Block]]` (リスト各アイテムのブロック列) を可変参照として返す。
+fn list_items_mut(items: Option<&mut Vec<Value>>) -> Vec<&mut Vec<Value>> {
+    items
+        .into_iter()
+        .flat_map(|items| items.iter_mut().filter_map(|i| i.as_array_mut()))
+        .collect()
 }
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -191,13 +254,40 @@ mod tests {
     }
 
     #[test]
-    fn replace_rendered_substitutes_svg() {
+    fn replace_rendered_substitutes_svg_for_html() {
         let mut blocks = vec![mermaid("graph LR\n A-->B")];
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        let warnings = apply_outcomes(mermaid_blocks, outcomes);
+        let warnings = apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
         assert!(warnings.is_empty());
         assert_eq!(blocks[0], raw("<svg/>"));
+    }
+
+    #[test]
+    fn replace_rendered_writes_image_for_non_html() {
+        let dir = std::env::temp_dir().join(format!("gazu-test-{:?}", std::thread::current().id()));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut blocks = vec![mermaid("graph LR\n A-->B")];
+        let mermaid_blocks = collect_mermaid_mut(&mut blocks);
+        let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
+        let warnings = apply_outcomes(&dir, "typst", mermaid_blocks, outcomes).unwrap();
+        assert!(warnings.is_empty());
+
+        assert_eq!(blocks[0]["t"], "Para");
+        let image = &blocks[0]["c"][0];
+        assert_eq!(image["t"], "Image");
+        let filename = image["c"][2][0].as_str().unwrap();
+        assert!(
+            filename.starts_with("gazu-") && filename.ends_with(".svg"),
+            "{filename}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join(filename)).unwrap(),
+            "<svg/>"
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
@@ -206,7 +296,7 @@ mod tests {
         let mut blocks = vec![orig.clone()];
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Failed("Lexical error".to_owned())];
-        let warnings = apply_outcomes(mermaid_blocks, outcomes);
+        let warnings = apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
         assert_eq!(blocks[0], orig);
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("Lexical error"), "{warnings:?}");
@@ -221,7 +311,7 @@ mod tests {
         })];
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        apply_outcomes(mermaid_blocks, outcomes);
+        apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
         assert_eq!(blocks[0]["c"][1][0], raw("<svg/>"));
     }
 }

@@ -1,4 +1,4 @@
-# sekien-pandoc サンプル
+# gazu サンプル
 
 ## フローチャート
 
