@@ -1,0 +1,3 @@
+/target/
+# --pdf-engine-opt=--root=/ を付けずに typst PDF を生成した場合に CWD に残る一時ファイル
+sekien-pandoc-*.svg
