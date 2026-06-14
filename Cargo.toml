@@ -5,6 +5,11 @@ edition = "2021"
 rust-version = "1.76"
 description = "Pandoc filter: converts Mermaid code blocks to SVG via sekien"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/olibrauma/gazu"
+homepage = "https://github.com/olibrauma/gazu"
+readme = "README.md"
+keywords = ["pandoc", "mermaid", "filter", "svg"]
+categories = ["command-line-utilities", "text-processing"]
 
 [[bin]]
 name = "gazu"
