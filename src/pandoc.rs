@@ -43,10 +43,10 @@ const HTML_FORMATS: &[&str] = &[
 pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()> {
     let mut ast: Value = serde_json::from_str(input).context("invalid Pandoc AST")?;
 
-    let blocks_mut = ast["blocks"]
-        .as_array_mut()
+    ast["blocks"]
+        .as_array()
         .context("no blocks in Pandoc AST")?;
-    let mermaid_blocks = collect_mermaid_mut(blocks_mut);
+    let mermaid_blocks = collect_mermaid_mut(&mut ast["blocks"]);
 
     if mermaid_blocks.is_empty() {
         print!("{input}");
@@ -66,20 +66,17 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
     Ok(())
 }
 
-/// Collects mutable references to Mermaid `CodeBlock`s in depth-first
-/// traversal order (also descends into Div, BlockQuote, and list blocks).
-fn collect_mermaid_mut(blocks: &mut [Value]) -> Vec<&mut Value> {
-    let mut out = Vec::new();
-    for block in blocks.iter_mut() {
-        if is_mermaid_block(block) {
-            out.push(block);
-        } else {
-            for inner in nested_mut(block) {
-                out.extend(collect_mermaid_mut(inner));
-            }
-        }
+/// Collects mutable references to Mermaid `CodeBlock`s anywhere in `value`,
+/// in depth-first traversal order.
+fn collect_mermaid_mut(value: &mut Value) -> Vec<&mut Value> {
+    if is_mermaid_block(value) {
+        return vec![value];
     }
-    out
+    match value {
+        Value::Array(items) => items.iter_mut().flat_map(collect_mermaid_mut).collect(),
+        Value::Object(map) => map.values_mut().flat_map(collect_mermaid_mut).collect(),
+        _ => Vec::new(),
+    }
 }
 
 /// Extracts the source code from a Mermaid `CodeBlock`.
@@ -150,29 +147,6 @@ fn is_mermaid_block(block: &Value) -> bool {
             .is_some_and(|cls| cls.iter().any(|c| c == "mermaid"))
 }
 
-/// Returns mutable references to a container block's child block lists.
-fn nested_mut(block: &mut Value) -> Vec<&mut Vec<Value>> {
-    match block["t"].as_str() {
-        // Div:          c = [Attr, [Block]]
-        Some("Div") => block["c"][1].as_array_mut().into_iter().collect(),
-        // BlockQuote:   c = [Block]
-        Some("BlockQuote") => block["c"].as_array_mut().into_iter().collect(),
-        // BulletList:   c = [[Block]]
-        Some("BulletList") => list_items_mut(block["c"].as_array_mut()),
-        // OrderedList:  c = [ListAttrs, [[Block]]]
-        Some("OrderedList") => list_items_mut(block["c"][1].as_array_mut()),
-        _ => vec![],
-    }
-}
-
-/// Returns mutable references to `[[Block]]` (the block list of each list item).
-fn list_items_mut(items: Option<&mut Vec<Value>>) -> Vec<&mut Vec<Value>> {
-    items
-        .into_iter()
-        .flat_map(|items| items.iter_mut().filter_map(|i| i.as_array_mut()))
-        .collect()
-}
-
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -188,8 +162,8 @@ mod tests {
         json!({ "t": "RawBlock", "c": ["html", svg] })
     }
 
-    fn collect_sources(blocks: &mut [Value]) -> Vec<String> {
-        collect_mermaid_mut(blocks)
+    fn collect_sources(root: &mut Value) -> Vec<String> {
+        collect_mermaid_mut(root)
             .into_iter()
             .map(|b| mermaid_source(b))
             .collect()
@@ -213,51 +187,66 @@ mod tests {
 
     #[test]
     fn collect_top_level() {
-        let mut blocks = vec![json!({ "t": "Para", "c": [] }), mermaid("graph LR\n A-->B")];
+        let mut blocks = json!([{ "t": "Para", "c": [] }, mermaid("graph LR\n A-->B")]);
         assert_eq!(collect_sources(&mut blocks), vec!["graph LR\n A-->B"]);
     }
 
     #[test]
     fn collect_skips_non_mermaid() {
-        let mut blocks = vec![
-            json!({ "t": "CodeBlock", "c": [["", ["rust"], []], "fn main(){}"] }),
+        let mut blocks = json!([
+            { "t": "CodeBlock", "c": [["", ["rust"], []], "fn main(){}"] },
             mermaid("graph TD\n X-->Y"),
-        ];
+        ]);
         assert_eq!(collect_sources(&mut blocks), vec!["graph TD\n X-->Y"]);
     }
 
     #[test]
     fn collect_inside_div() {
-        let div = json!({
+        let mut blocks = json!([{
             "t": "Div",
             "c": [["", [], []], [mermaid("graph TD\n X-->Y")]]
-        });
-        assert_eq!(collect_sources(&mut [div]), vec!["graph TD\n X-->Y"]);
+        }]);
+        assert_eq!(collect_sources(&mut blocks), vec!["graph TD\n X-->Y"]);
     }
 
     #[test]
     fn collect_inside_blockquote() {
-        let bq = json!({
+        let mut blocks = json!([{
             "t": "BlockQuote",
             "c": [mermaid("graph LR\n A-->B")]
-        });
-        assert_eq!(collect_sources(&mut [bq]), vec!["graph LR\n A-->B"]);
+        }]);
+        assert_eq!(collect_sources(&mut blocks), vec!["graph LR\n A-->B"]);
+    }
+
+    #[test]
+    fn collect_inside_table_cell() {
+        // Table cell: c = [Attr, Alignment, RowSpan, ColSpan, [Block]]
+        let mut blocks = json!([{
+            "t": "Table",
+            "c": [["", [], []], null, null, null, [
+                { "c": [["", [], []], "Default", 1, [{
+                    "c": [["", [], []], "AlignDefault", 1, 1, [mermaid("graph LR\n A-->B")]]
+                }]] }
+            ]]
+        }]);
+        assert_eq!(collect_sources(&mut blocks), vec!["graph LR\n A-->B"]);
     }
 
     #[test]
     fn collect_multiple_preserves_order() {
-        let mut blocks = vec![mermaid("A"), mermaid("B"), mermaid("C")];
+        let mut blocks = json!([mermaid("A"), mermaid("B"), mermaid("C")]);
         assert_eq!(collect_sources(&mut blocks), vec!["A", "B", "C"]);
     }
 
     #[test]
     fn collect_empty() {
-        assert!(collect_sources(&mut []).is_empty());
+        let mut blocks = json!([]);
+        assert!(collect_sources(&mut blocks).is_empty());
     }
 
     #[test]
     fn replace_rendered_substitutes_svg_for_html() {
-        let mut blocks = vec![mermaid("graph LR\n A-->B")];
+        let mut blocks = json!([mermaid("graph LR\n A-->B")]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
         let warnings = apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
@@ -270,7 +259,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("gazu-test-{:?}", std::thread::current().id()));
         std::fs::create_dir_all(&dir).unwrap();
 
-        let mut blocks = vec![mermaid("graph LR\n A-->B")];
+        let mut blocks = json!([mermaid("graph LR\n A-->B")]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
         let warnings = apply_outcomes(&dir, "typst", mermaid_blocks, outcomes).unwrap();
@@ -295,7 +284,7 @@ mod tests {
     #[test]
     fn replace_failed_leaves_original_and_warns() {
         let orig = mermaid("bad diagram");
-        let mut blocks = vec![orig.clone()];
+        let mut blocks = json!([orig.clone()]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Failed("Lexical error".to_owned())];
         let warnings = apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
@@ -307,10 +296,10 @@ mod tests {
     #[test]
     fn replace_inside_div() {
         let inner_mermaid = mermaid("graph LR\n A-->B");
-        let mut blocks = vec![json!({
+        let mut blocks = json!([{
             "t": "Div",
             "c": [["", [], []], [inner_mermaid]]
-        })];
+        }]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
         apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
