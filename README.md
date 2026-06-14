@@ -126,9 +126,15 @@ GAZU_CONFIG=mermaid-config.json \
   (3 Mermaid diagrams). mermaid-filter 1.4.x (mmdc 11.14.0) / gazu 0.1.0
   (mermaid.js 11.14.0, via sekien 0.3.0)
 - 計測方法は `util/bench/bench.sh` を参照
+- Speed / Memory はフィルタ本体 (gazu / mermaid-filter) とその子プロセス
+  (Xvfb・WebKit・mmdc・Chromium 等) のみを計測したもので、`pandoc` 本体の
+  AST 生成・出力フォーマット変換は含まない
+- Install size は gazu は単一バイナリのサイズ、mermaid-filter は npm
+  パッケージ + Puppeteer がダウンロードする Chromium 本体の合計
 
 | Metric | gazu | mermaid-filter | Advantage |
 |---|---|---|---|
+| Install size | **5.0 MB** | ~568 MB | **99% smaller** |
 | Speed (3 diagrams) | **~2.0 s** | ~14.8 s | **~7x faster** |
 | Memory (RSS) | **~446 MB** | ~849 MB | **~47% less** |
 
