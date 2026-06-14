@@ -25,7 +25,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev xvfb pandoc
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev xvfb
+
+      - uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: "3.7"
 
       - name: Check formatting
         run: cargo fmt --check
