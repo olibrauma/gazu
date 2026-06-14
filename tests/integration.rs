@@ -1,7 +1,7 @@
-//! gazu CLI 統合テスト。
+//! gazu CLI integration tests.
 //!
-//! sekien は lib として埋め込まれているため、別途インストールは不要。
-//! Linux では Xvfb が必要 (sekien が内部で起動する)。
+//! sekien is embedded as a library, so no separate install is needed.
+//! On Linux, Xvfb is required (sekien starts it internally).
 
 use std::ffi::OsString;
 use std::io::Write;
@@ -30,15 +30,15 @@ macro_rules! pandoc_or_skip {
     };
 }
 
-/// pandoc を `-t html --filter gazu` 付きで呼び出す。
+/// Invokes pandoc with `-t html --filter gazu`.
 fn run_pandoc(markdown: &str) -> Output {
     run_pandoc_in(None, "html", &[], markdown)
 }
 
-/// pandoc を `-t <to> --filter gazu` 付きで呼び出す。
-/// `dir` を指定すると pandoc の CWD をそこに変更する
-/// (gazu が typst 等向けに SVG ファイルを書き出す先になる)。
-/// `envs` は gazu に渡す追加の環境変数 (例: `GAZU_CONFIG`)。
+/// Invokes pandoc with `-t <to> --filter gazu`.
+/// If `dir` is given, pandoc's CWD is changed to it (this is where gazu
+/// writes SVG files for typst etc.).
+/// `envs` are extra environment variables passed to gazu (e.g. `GAZU_CONFIG`).
 fn run_pandoc_in(
     dir: Option<&std::path::Path>,
     to: &str,
@@ -98,7 +98,7 @@ fn version_exits_zero() {
 
 #[test]
 fn unknown_flag_is_ignored() {
-    // Pandoc が output format 名を渡すケースを模倣する
+    // Mimics how Pandoc passes the output format name as an argument.
     let out = Command::new(gazu_bin())
         .arg("html")
         .stdin(Stdio::piped())
@@ -106,10 +106,11 @@ fn unknown_flag_is_ignored() {
         .stderr(Stdio::piped())
         .spawn()
         .expect("spawn");
-    // stdin を閉じて EOF を送る (Pandoc AST が来ない = エラーになるが exit 非 0 のみ確認)
+    // Close stdin to send EOF (no Pandoc AST arrives, so this errors out —
+    // we only check that the exit code is non-zero).
     let output = out.wait_with_output().expect("wait");
-    // exit 1 は JSON parse 失敗によるもので、unknown flag によるものではない
-    // "unknown option" のようなメッセージが stderr に出ていないことを確認する
+    // The exit 1 comes from a JSON parse failure, not from the unknown flag.
+    // Check that stderr doesn't contain a message like "unknown option".
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         !stderr.contains("unknown"),

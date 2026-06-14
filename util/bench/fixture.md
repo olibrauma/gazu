@@ -1,8 +1,8 @@
 # Benchmark fixture
 
-3 つの Mermaid 図を含む文書。gazu は 1 回の `render_stream` でまとめて
-レンダリングするのに対し、mermaid-filter はブロックごとに `mmdc` (Puppeteer)
-を起動するため、ブロック数に応じて差が広がる。
+A document containing 3 Mermaid diagrams. gazu renders all of them in a
+single `render_stream` call, while mermaid-filter spawns `mmdc` (Puppeteer)
+per block, so the gap widens with the number of blocks.
 
 ## Flowchart
 

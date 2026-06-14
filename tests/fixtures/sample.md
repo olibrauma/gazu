@@ -1,27 +1,27 @@
-# gazu サンプル
+# gazu sample
 
-## フローチャート
+## Flowchart
 
 ```mermaid
 graph LR
-  A[入力] --> B{分岐}
-  B -- Yes --> C[処理]
-  B -- No  --> D[スキップ]
-  C --> E[出力]
+  A[Input] --> B{Branch}
+  B -- Yes --> C[Process]
+  B -- No  --> D[Skip]
+  C --> E[Output]
   D --> E
 ```
 
-## シーケンス図
+## Sequence diagram
 
 ```mermaid
 sequenceDiagram
   participant U as User
   participant S as Server
-  U->>S: リクエスト
-  S-->>U: レスポンス
+  U->>S: Request
+  S-->>U: Response
 ```
 
-## 通常のコードブロック (変換しない)
+## Regular code block (not converted)
 
 ```rust
 fn main() {
@@ -29,7 +29,7 @@ fn main() {
 }
 ```
 
-## Div の中の Mermaid (再帰収集の確認)
+## Mermaid inside a Div (checks recursive collection)
 
 ::: note
 ```mermaid
@@ -38,13 +38,13 @@ graph TD
 ```
 :::
 
-## 壊れた Mermaid (graceful fallback の確認)
+## Broken Mermaid (checks graceful fallback)
 
 ```mermaid
 totallyBogusDiagram
 ```
 
-## 通常テキスト
+## Regular text
 
-- 上の壊れた Mermaid はコードブロックのままHTMLに残るはず
-- 他の図は SVG に変換されているはず
+- The broken Mermaid above should remain as a code block in the HTML
+- The other diagrams should be converted to SVG

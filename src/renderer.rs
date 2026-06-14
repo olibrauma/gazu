@@ -1,24 +1,25 @@
-//! 薄い sekien lib (`render_stream`) wrapper。
+//! Thin wrapper around the sekien lib (`render_stream`).
 //!
-//! gazu は 1 実行でまとめて処理して終了するため、子プロセスではなく
-//! `sekien::render_stream` を直接呼び出す。WebView/Xvfb の初期化コストは
-//! プロセス全体で 1 回のみ。
+//! gazu processes everything in one run and then exits, so it calls
+//! `sekien::render_stream` directly instead of spawning a child process.
+//! The WebView/Xvfb initialization cost is paid only once per process.
 
 use anyhow::Result;
 use sekien::{render_stream, RenderOutcome};
 use std::sync::mpsc;
 
-/// 1 ブロック分の render 結果。
+/// Result of rendering a single block.
 pub enum BlockOutcome {
     Rendered(String),
-    /// Mermaid の解析・描画に失敗した。エラーメッセージを保持する。
+    /// Mermaid failed to parse/render. Holds the error message.
     Failed(String),
 }
 
-/// `diagrams` を sekien に一括 render させ、入力順の `BlockOutcome` を返す。
+/// Renders `diagrams` in a single batch via sekien, returning `BlockOutcome`
+/// in input order.
 ///
-/// `render_stream` は `on_result` を `diagrams` と同じ順序で 1 件ずつ呼び出す
-/// ため、結果をそのままチャネルに送って `collect` するだけでよい。
+/// `render_stream` calls `on_result` once per diagram in the same order as
+/// `diagrams`, so we can just forward each result to a channel and collect.
 pub fn render_blocks(
     diagrams: Vec<String>,
     config_json: Option<&str>,

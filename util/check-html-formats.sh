@@ -1,17 +1,18 @@
 #!/bin/bash
-# src/pandoc.rs の HTML_FORMATS allowlist を実測で再生成する。
+# Regenerates the src/pandoc.rs HTML_FORMATS allowlist by measurement.
 #
-# RawBlock("html", "<svg>...</svg>") を含む Pandoc AST を各 output format の
-# writer に通し、SVG の中身がそのまま (またはフォーマット独自の raw-html 構文で)
-# 出力されるフォーマットを "PASS" として一覧表示する。
+# Runs a Pandoc AST containing RawBlock("html", "<svg>...</svg>") through
+# each output format's writer, and lists as "PASS" the formats where the SVG
+# content comes out as-is (or in the format's own raw-HTML syntax).
 #
-# pandoc のバージョンを上げたときは、このスクリプトを再実行して
-# src/pandoc.rs の HTML_FORMATS / コメントを見直すこと。
+# When bumping the pandoc version, re-run this script and revisit
+# HTML_FORMATS / the comment in src/pandoc.rs.
 #
-# 注意:
-#   - chunkedhtml はマルチファイル writer (`-o <directory>` 必須) のため
-#     stdout 経由のこの方法では検証できず、対象外にしている。
-#   - docx/odt/pptx/epub 等のバイナリ formats も対象外（テキスト出力ではないため）。
+# Notes:
+#   - chunkedhtml is excluded because it's a multi-file writer (requires
+#     `-o <directory>`) and can't be checked via stdout this way.
+#   - Binary formats like docx/odt/pptx/epub are also excluded (not text
+#     output).
 
 set -euo pipefail
 

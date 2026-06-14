@@ -20,10 +20,11 @@ Environment:
                           (same format as mmdc's --configFile)"
 }
 
-/// `GAZU_CONFIG` で指定された JSON ファイルを読み込み、
-/// `render_stream` に渡せる config_json 文字列に変換する。
+/// Reads the JSON file pointed to by `GAZU_CONFIG` and turns it into a
+/// config_json string suitable for `render_stream`.
 ///
-/// mmdc の `--configFile` と同じ形式 (mermaid.initialize() に渡す JSON オブジェクト) を想定する。
+/// Expects the same format as mmdc's `--configFile` (a JSON object passed to
+/// mermaid.initialize()).
 fn load_config_json(path: &str) -> Result<String> {
     let raw = std::fs::read_to_string(path)
         .with_context(|| format!("cannot read config file '{path}' (from GAZU_CONFIG)"))?;
@@ -36,8 +37,8 @@ fn load_config_json(path: &str) -> Result<String> {
 }
 
 fn main() -> Result<()> {
-    // Pandoc は filter 起動時に出力フォーマット名を唯一の位置引数として渡す
-    // (例: "html", "typst", "latex")。
+    // Pandoc passes the output format name as the sole positional argument
+    // when invoking a filter (e.g. "html", "typst", "latex").
     let mut format = "html".to_owned();
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
@@ -54,7 +55,7 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             _ if !arg.starts_with('-') => format = arg,
-            _ => {} // 未知のフラグは無視する
+            _ => {} // ignore unknown flags
         }
     }
 

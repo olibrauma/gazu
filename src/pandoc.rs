@@ -5,14 +5,14 @@ use std::hash::{Hash, Hasher};
 use std::io::{self, Write};
 use std::path::Path;
 
-/// `RawBlock("html", svg)` を素通り (またはフォーマット独自の raw-html 構文に
-/// 変換) して出力するフォーマット。これら以外 (typst, latex 等) では SVG を
-/// ファイルに書き出し `Image` に変換する。
+/// Formats that pass `RawBlock("html", svg)` through as-is (or translate it
+/// into the format's own raw-HTML syntax). For all other formats (typst,
+/// latex, etc.) the SVG is written to a file and converted to an `Image`.
 ///
-/// `util/check-html-formats.sh` の実測結果 (pandoc 3.7)。pandoc のバージョンを
-/// 上げたときはこのスクリプトを再実行し、リストを見直すこと。
-/// `chunkedhtml` はマルチファイル writer (`-o <directory>` 必須) のため
-/// このスクリプトでは検証できず対象外。
+/// Measured against pandoc 3.7 with `util/check-html-formats.sh`. Re-run
+/// that script and revisit this list when bumping the pandoc version.
+/// `chunkedhtml` is excluded because it's a multi-file writer (requires
+/// `-o <directory>`) and can't be checked by that script.
 const HTML_FORMATS: &[&str] = &[
     "html",
     "html4",
@@ -38,7 +38,8 @@ const HTML_FORMATS: &[&str] = &[
     "docbook4",
 ];
 
-/// Pandoc AST JSON を受け取り、Mermaid ブロックを `format` に応じた表現に置換して stdout に書く。
+/// Reads a Pandoc AST JSON, replaces Mermaid blocks with a representation
+/// suited to `format`, and writes the result to stdout.
 pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()> {
     let mut ast: Value = serde_json::from_str(input).context("invalid Pandoc AST")?;
 
@@ -65,8 +66,8 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
     Ok(())
 }
 
-/// Mermaid CodeBlock への可変参照を深さ優先の走査順で収集する
-/// （Div・BlockQuote・リスト内のブロックも対象）。
+/// Collects mutable references to Mermaid `CodeBlock`s in depth-first
+/// traversal order (also descends into Div, BlockQuote, and list blocks).
 fn collect_mermaid_mut(blocks: &mut [Value]) -> Vec<&mut Value> {
     let mut out = Vec::new();
     for block in blocks.iter_mut() {
@@ -81,18 +82,18 @@ fn collect_mermaid_mut(blocks: &mut [Value]) -> Vec<&mut Value> {
     out
 }
 
-/// Mermaid CodeBlock のソースコードを取り出す。
+/// Extracts the source code from a Mermaid `CodeBlock`.
 fn mermaid_source(block: &Value) -> String {
     block["c"][1].as_str().unwrap_or("").to_owned()
 }
 
-/// `collect_mermaid_mut` で収集したブロックに `outcomes` を `1:1` で適用する。
+/// Applies `outcomes` 1:1 to the blocks collected by `collect_mermaid_mut`.
 ///
-/// 成功したブロックは `format` が raw HTML を素通りするものなら
-/// `RawBlock("html", svg)` に、それ以外 (typst, latex 等) なら SVG を `dir`
-/// にファイルとして書き出し `Para[Image]` に置換する。失敗したブロックは
-/// 元の `CodeBlock` をそのまま残し、警告メッセージを返り値に積む（呼び出し側で
-/// 出力する）。
+/// A successful block becomes `RawBlock("html", svg)` if `format` passes raw
+/// HTML through, or otherwise has its SVG written to a file under `dir` and
+/// is replaced with `Para[Image]`. A failed block is left as the original
+/// `CodeBlock`, and a warning message is pushed onto the returned `Vec`
+/// (the caller prints it).
 fn apply_outcomes(
     dir: &Path,
     format: &str,
@@ -119,14 +120,15 @@ fn apply_outcomes(
     Ok(warnings)
 }
 
-/// `svg` を `dir` にファイルとして書き出し、それを参照する `Para[Image]`
-/// ブロックを返す。
+/// Writes `svg` to a file under `dir` and returns a `Para[Image]` block that
+/// references it.
 ///
-/// raw HTML を素通りしない出力フォーマット (typst, latex 等) では SVG を
-/// インライン埋め込みできないため、ファイル経由の `Image` ノードに変換する。
-/// `dir` は呼び出し元 (pandoc) のカレントディレクトリと一致させる必要がある
-/// （typst 等はファイルパスを自身の root = pandoc の CWD 基準で解決するため）。
-/// pandoc は filter 終了後の生成フェーズでファイルを読むため、ここで削除はできない。
+/// Output formats that don't pass raw HTML through (typst, latex, etc.)
+/// can't embed SVG inline, so it's converted to an `Image` node backed by a
+/// file. `dir` must match pandoc's own current directory, since formats like
+/// typst resolve the file path relative to their root (= pandoc's CWD).
+/// The file can't be deleted here, since pandoc reads it during its
+/// generation phase, after the filter has exited.
 fn image_block(dir: &Path, svg: &str) -> Result<Value> {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     svg.hash(&mut hasher);
@@ -148,7 +150,7 @@ fn is_mermaid_block(block: &Value) -> bool {
             .is_some_and(|cls| cls.iter().any(|c| c == "mermaid"))
 }
 
-/// コンテナブロックの子ブロック列を可変参照として返す。
+/// Returns mutable references to a container block's child block lists.
 fn nested_mut(block: &mut Value) -> Vec<&mut Vec<Value>> {
     match block["t"].as_str() {
         // Div:          c = [Attr, [Block]]
@@ -163,7 +165,7 @@ fn nested_mut(block: &mut Value) -> Vec<&mut Vec<Value>> {
     }
 }
 
-/// `[[Block]]` (リスト各アイテムのブロック列) を可変参照として返す。
+/// Returns mutable references to `[[Block]]` (the block list of each list item).
 fn list_items_mut(items: Option<&mut Vec<Value>>) -> Vec<&mut Vec<Value>> {
     items
         .into_iter()
