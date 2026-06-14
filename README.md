@@ -8,7 +8,7 @@ A Pandoc filter for Mermaid. **Fast**, **light**, **small**, and **OS-native**.
 cargo install gazu
 ```
 
-On Linux, building requires the WebKitGTK development packages (Ubuntu example):
+On Linux, WebKitGTK development packages are required (Ubuntu example):
 
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev
@@ -16,20 +16,20 @@ sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev
 
 ## Runtime requirements
 
-gazu renders via an OS-native WebView.
+### Linux
 
-| OS | Requirement |
-|---|---|
-| Linux | Xvfb (launched internally — no session or display needed) |
-| macOS | Display required (WKWebView) |
-| Windows | Display required (WebView2) |
-
-Install Xvfb on Linux:
+gazu launches its own Xvfb and ignores any existing display. Install Xvfb if
+it isn't already present:
 
 ```bash
 apt install xvfb                  # Debian / Ubuntu
 dnf install xorg-x11-server-Xvfb  # Fedora
 ```
+
+### macOS / Windows
+
+A display connection is required (uses the OS-native WebView: WKWebView /
+WebView2).
 
 ## Usage
 
@@ -45,16 +45,9 @@ pandoc input.md -o output.pdf --pdf-engine=typst --filter gazu -V mainfont="Noto
 ```
 
 Depending on the output format, gazu may write `gazu-<hash>.svg` files to
-the current directory instead of embedding SVG inline. See
-[Behavior by output format](#behavior-by-output-format) for details.
-
-### Supported PDF engines
-
-| PDF engine | Behavior |
-|---|---|
-| `weasyprint` | ✓ (via HTML) |
-| `typst` | ✓ (converts SVG to an `Image` via a file) |
-| `pdflatex` / `xelatex` / `lualatex` | ✗ (graphicx can't handle SVG directly; would need the `svg` package + Inkscape + `--shell-escape`) |
+the current directory. See
+[Behavior by output format](#behavior-by-output-format). For PDF output, see
+[Notes → PDF output](#pdf-output).
 
 ## CLI options
 
@@ -63,9 +56,9 @@ the current directory instead of embedding SVG inline. See
 | `--version`, `-v` | Show version |
 | `--help`, `-h` | Show help |
 
-## Mermaid configuration (theme, fonts, etc.)
+## Mermaid configuration
 
-Set `GAZU_CONFIG` to a JSON file to customize `mermaid.initialize()`. Same
+Set `GAZU_CONFIG` to a JSON file. Same
 format as [mmdc](https://github.com/mermaid-js/mermaid-cli)'s `--configFile`:
 
 ```json
@@ -82,13 +75,12 @@ GAZU_CONFIG=mermaid-config.json \
 
 ## Behavior by output format
 
-gazu embeds each diagram based on the output format pandoc passes it (from
-`-t`/`-o`):
+gazu embeds diagrams two ways, depending on the output format (`-t`/`-o`):
 
 ### Inline SVG
 
-Formats that pass through raw HTML get `<svg>...</svg>` embedded directly,
-no file created:
+Formats that pass through raw HTML embed `<svg>...</svg>` directly, no file
+written:
 
 - HTML / slides: `html`, `html4`, `html5`, `s5`, `slidy`, `slideous`,
   `dzslides`, `revealjs`
@@ -98,14 +90,24 @@ no file created:
 
 ### SVG file + Image
 
-Other formats (`typst`, `latex`, etc.) drop raw HTML, so the SVG is written
-to the CWD as `gazu-<hash>.svg` and embedded as an `Image`. Files remain
-after conversion.
+Other formats (`typst`, `latex`, etc.) drop raw HTML. gazu writes
+`gazu-<hash>.svg` to the current directory and embeds it as an `Image`. The
+file remains after conversion.
+
+## Notes
 
 ### On failure
 
 A diagram that fails to parse or render is left as the original
 ` ```mermaid ` code block, with a warning on stderr.
+
+### PDF output
+
+LaTeX-based `--pdf-engine`s (`pdflatex`, `xelatex`, `lualatex`, ...) need the
+`svg` LaTeX package, `--shell-escape`, and `rsvg-convert` or `inkscape` on
+PATH to render the embedded SVG — without them, the PDF build fails. Use
+`--pdf-engine=weasyprint` or `--pdf-engine=typst` instead (see
+[Usage](#usage)).
 
 ## vs mermaid-filter
 
