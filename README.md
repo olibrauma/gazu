@@ -123,7 +123,7 @@ gazu is smaller, faster, and lighter than
 mermaid-filter spawns `mmdc` (Puppeteer/Chromium) per block; gazu renders the
 whole document in one batch.
 
-- Median of 5 runs, Linux x86_64, `util/bench/fixture.md` (3 diagrams) — see `./util/bench/bench.sh`
+- Median of 10 runs, Linux x86_64, `util/bench/fixture.md` (3 diagrams) — see `./util/bench/bench.sh`
 - Both use mermaid.js 11.14.0 (mermaid-filter 1.4.x / mmdc 11.14.0)
 - Speed/Memory: filter process + children (Xvfb, WebKit, mmdc, Chromium), not pandoc itself
 - Install size: gazu's binary vs. mermaid-filter's npm package + Puppeteer's Chromium download
