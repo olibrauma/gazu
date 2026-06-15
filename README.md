@@ -128,6 +128,19 @@ whole document in one batch.
 - Speed/Memory: filter process + children (Xvfb, WebKit, mmdc, Chromium), not pandoc itself
 - Install size: gazu's binary vs. mermaid-filter's npm package + Puppeteer's Chromium download
 
+On Apple Silicon (M-series), the gap is even larger:
+
+| Metric | gazu | mermaid-filter | Advantage |
+|---|---|---|---|
+| Speed (3 diagrams) | **403 ms** | 4.60 s | **~11x faster** |
+| Memory (RSS) | **87 MB** | 634 MB | **~86% less** |
+
+- Median of 10 runs, macOS arm64 (Apple Silicon)
+- mermaid-filter's bundled Chromium runs under Rosetta 2 on this platform (no
+  native arm64 build for the pinned Puppeteer/Chromium revision) — part of
+  this gap reflects that translation overhead, not just gazu vs.
+  mermaid-filter's architecture.
+
 ## License
 
 Licensed under either of
