@@ -128,22 +128,19 @@ echo "# gazu benchmark results"
 echo "_(warmup ${WARMUP_RUNS} runs, measurement ${BENCH_RUNS} runs, median; fixture.md, 3 Mermaid diagrams)_"
 echo ""
 
+printf "  %-20s" "gazu" >&2
+read -r g_ms g_rss < <(bench run_gazu)
+echo >&2
+
 if $mf_present; then
-    printf "| filter | time | RSS |\n"
-    printf "|---|---|---|\n"
-    printf "  %-20s" "gazu" >&2
-    read -r g_ms g_rss < <(bench run_gazu)
-    echo >&2
     printf "  %-20s" "mermaid-filter" >&2
     read -r m_ms m_rss < <(bench run_mermaid_filter)
     echo >&2
-    printf "| gazu | %s | %s |\n" "$(fmt_ms "$g_ms")" "$(fmt_rss "$g_rss")"
+fi
+
+printf "| filter | time | RSS |\n"
+printf "|---|---|---|\n"
+printf "| gazu | %s | %s |\n" "$(fmt_ms "$g_ms")" "$(fmt_rss "$g_rss")"
+if $mf_present; then
     printf "| mermaid-filter | %s | %s |\n" "$(fmt_ms "$m_ms")" "$(fmt_rss "$m_rss")"
-else
-    printf "| filter | time | RSS |\n"
-    printf "|---|---|---|\n"
-    printf "  %-20s" "gazu" >&2
-    read -r g_ms g_rss < <(bench run_gazu)
-    echo >&2
-    printf "| gazu | %s | %s |\n" "$(fmt_ms "$g_ms")" "$(fmt_rss "$g_rss")"
 fi
