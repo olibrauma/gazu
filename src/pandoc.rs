@@ -292,7 +292,11 @@ mod tests {
         assert_eq!(plan.replacements, vec![None]);
         assert!(plan.files.is_empty());
         assert_eq!(plan.warnings.len(), 1);
-        assert!(plan.warnings[0].contains("Lexical error"), "{:?}", plan.warnings);
+        assert!(
+            plan.warnings[0].contains("Lexical error"),
+            "{:?}",
+            plan.warnings
+        );
     }
 
     #[test]
