@@ -1,6 +1,6 @@
 [package]
 name = "gazu"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Pandoc filter: converts Mermaid code blocks to SVG via sekien"
 license = "MIT OR Apache-2.0"
@@ -15,6 +15,6 @@ name = "gazu"
 path = "src/main.rs"
 
 [dependencies]
-sekien = "0.3.1"
+sekien = "0.3.2"
 serde_json = "1"
 anyhow = "1"
