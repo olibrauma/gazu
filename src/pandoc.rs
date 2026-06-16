@@ -1,5 +1,5 @@
 use crate::renderer::{self, BlockOutcome};
-use anyhow::{Context, Result, ensure};
+use anyhow::{ensure, Context, Result};
 use serde_json::{json, Value};
 use std::hash::{Hash, Hasher};
 use std::io::{self, Write};
