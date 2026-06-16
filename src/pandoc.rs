@@ -109,7 +109,7 @@ fn apply_outcomes(
                 };
             }
             BlockOutcome::Failed(err) => warnings.push(format!(
-                "warning: gazu: mermaid block {} failed to render: {err}",
+                "warning: gazu: mermaid block {} failed to render:\n{err}",
                 i + 1
             )),
         }
