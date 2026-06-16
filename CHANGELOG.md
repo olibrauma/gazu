@@ -7,13 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.1] — 2026-06-16
-
-### Changed
-
-- Updated sekien to 0.3.2.
-
-## [0.2.0] — 2026-06-16
+## [0.2.0] — 2026-06-17
 
 ### Added
 
@@ -28,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Render failure warnings now print the Mermaid error on its own line, so
   multi-line errors (including source context and `^` pointer) display
   correctly.
+- Updated sekien to 0.3.2.
 
 ### Fixed
 
@@ -55,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (same format as `mmdc --configFile`).
 - Prebuilt binaries for Linux x86_64, macOS arm64, and Windows x86_64.
 
-[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/olibrauma/gazu/compare/v0.2.0...v0.2.1
+[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/olibrauma/gazu/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/olibrauma/gazu/releases/tag/v0.1.0
