@@ -54,22 +54,22 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
     let diagrams = mermaid_blocks.iter().map(|b| mermaid_source(b)).collect();
     let outcomes = renderer::render_blocks(diagrams, config_json)?;
     let output_dir = (!HTML_FORMATS.contains(&format)).then_some(Path::new("gazu"));
-    let (replacements, files, warnings) = plan_outcomes(output_dir, outcomes);
+    let plan = plan_outcomes(output_dir, outcomes);
 
     if let Some(dir) = output_dir {
         std::fs::create_dir_all(dir)
             .with_context(|| format!("failed to create directory {}", dir.display()))?;
-        for (path, svg) in &files {
+        for (path, svg) in &plan.files {
             std::fs::write(path, svg)
                 .with_context(|| format!("failed to write {}", path.display()))?;
         }
     }
-    for (block, replacement) in mermaid_blocks.into_iter().zip(replacements) {
+    for (block, replacement) in mermaid_blocks.into_iter().zip(plan.replacements) {
         if let Some(v) = replacement {
             *block = v;
         }
     }
-    for warning in warnings {
+    for warning in plan.warnings {
         eprintln!("{warning}");
     }
 
@@ -98,16 +98,18 @@ fn mermaid_source(block: &Value) -> String {
     block["c"][1].as_str().unwrap_or("").to_owned()
 }
 
+struct Plan {
+    replacements: Vec<Option<Value>>,
+    files: Vec<(PathBuf, String)>,
+    warnings: Vec<String>,
+}
+
 /// Computes replacement values and files to write for each outcome. Pure.
 ///
-/// Returns:
 /// - `replacements`: `Some(v)` to replace the block, `None` to leave it unchanged
 /// - `files`: SVG files to write, as `(path, content)` pairs
 /// - `warnings`: one entry per failed block
-fn plan_outcomes(
-    output_dir: Option<&Path>,
-    outcomes: Vec<BlockOutcome>,
-) -> (Vec<Option<Value>>, Vec<(PathBuf, String)>, Vec<String>) {
+fn plan_outcomes(output_dir: Option<&Path>, outcomes: Vec<BlockOutcome>) -> Plan {
     let mut replacements = Vec::with_capacity(outcomes.len());
     let mut files = Vec::new();
     let mut warnings = Vec::new();
@@ -132,7 +134,11 @@ fn plan_outcomes(
             }
         }
     }
-    (replacements, files, warnings)
+    Plan {
+        replacements,
+        files,
+        warnings,
+    }
 }
 
 /// Returns the output path and a `Para[Image]` block that references it.
@@ -258,23 +264,23 @@ mod tests {
     #[test]
     fn replace_rendered_substitutes_svg_for_html() {
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        let (replacements, files, warnings) = plan_outcomes(None, outcomes);
-        assert!(warnings.is_empty());
-        assert!(files.is_empty());
-        assert_eq!(replacements, vec![Some(raw("<svg/>"))]);
+        let plan = plan_outcomes(None, outcomes);
+        assert!(plan.warnings.is_empty());
+        assert!(plan.files.is_empty());
+        assert_eq!(plan.replacements, vec![Some(raw("<svg/>"))]);
     }
 
     #[test]
     fn replace_rendered_plans_image_for_non_html() {
         let dir = Path::new("gazu");
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        let (replacements, files, warnings) = plan_outcomes(Some(dir), outcomes);
-        assert!(warnings.is_empty());
-        assert_eq!(files.len(), 1);
-        let (path, svg) = &files[0];
+        let plan = plan_outcomes(Some(dir), outcomes);
+        assert!(plan.warnings.is_empty());
+        assert_eq!(plan.files.len(), 1);
+        let (path, svg) = &plan.files[0];
         assert!(path.to_string_lossy().ends_with(".svg"), "{path:?}");
         assert_eq!(svg, "<svg/>");
-        let replacement = replacements[0].as_ref().unwrap();
+        let replacement = plan.replacements[0].as_ref().unwrap();
         assert_eq!(replacement["t"], "Para");
         assert_eq!(replacement["c"][0]["t"], "Image");
     }
@@ -282,11 +288,11 @@ mod tests {
     #[test]
     fn replace_failed_leaves_original_and_warns() {
         let outcomes = vec![BlockOutcome::Failed("Lexical error".to_owned())];
-        let (replacements, files, warnings) = plan_outcomes(None, outcomes);
-        assert_eq!(replacements, vec![None]);
-        assert!(files.is_empty());
-        assert_eq!(warnings.len(), 1);
-        assert!(warnings[0].contains("Lexical error"), "{warnings:?}");
+        let plan = plan_outcomes(None, outcomes);
+        assert_eq!(plan.replacements, vec![None]);
+        assert!(plan.files.is_empty());
+        assert_eq!(plan.warnings.len(), 1);
+        assert!(plan.warnings[0].contains("Lexical error"), "{:?}", plan.warnings);
     }
 
     #[test]
@@ -298,8 +304,8 @@ mod tests {
         }]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        let (replacements, _, _) = plan_outcomes(None, outcomes);
-        for (block, replacement) in mermaid_blocks.into_iter().zip(replacements) {
+        let plan = plan_outcomes(None, outcomes);
+        for (block, replacement) in mermaid_blocks.into_iter().zip(plan.replacements) {
             if let Some(v) = replacement {
                 *block = v;
             }
