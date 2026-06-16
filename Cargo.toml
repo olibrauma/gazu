@@ -16,6 +16,6 @@ name = "gazu"
 path = "src/main.rs"
 
 [dependencies]
-sekien = "0.3.0"
+sekien = "0.3.1"
 serde_json = "1"
 anyhow = "1"
