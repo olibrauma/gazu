@@ -55,7 +55,7 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
 
     let diagrams = mermaid_blocks.iter().map(|b| mermaid_source(b)).collect();
     let outcomes = renderer::render_blocks(diagrams, config_json)?;
-    for warning in apply_outcomes(Path::new("."), format, mermaid_blocks, outcomes)? {
+    for warning in apply_outcomes(Path::new("gazu"), format, mermaid_blocks, outcomes)? {
         eprintln!("{warning}");
     }
 
@@ -122,21 +122,24 @@ fn apply_outcomes(
 ///
 /// Output formats that don't pass raw HTML through (typst, latex, etc.)
 /// can't embed SVG inline, so it's converted to an `Image` node backed by a
-/// file. `dir` must match pandoc's own current directory, since formats like
-/// typst resolve the file path relative to their root (= pandoc's CWD).
-/// The file can't be deleted here, since pandoc reads it during its
-/// generation phase, after the filter has exited.
+/// file. `dir` must be a relative path within pandoc's CWD, since formats
+/// like typst resolve image paths from there. The file persists after the
+/// filter exits because pandoc reads it during its own generation phase.
 fn image_block(dir: &Path, svg: &str) -> Result<Value> {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     svg.hash(&mut hasher);
-    let filename = format!("gazu-{:016x}.svg", hasher.finish());
+    let filename = format!("{:016x}.svg", hasher.finish());
+    let path = dir.join(&filename);
 
-    std::fs::write(dir.join(&filename), svg)
-        .with_context(|| format!("failed to write {filename}"))?;
+    std::fs::create_dir_all(dir)
+        .with_context(|| format!("failed to create directory {}", dir.display()))?;
+    std::fs::write(&path, svg)
+        .with_context(|| format!("failed to write {}", path.display()))?;
 
+    let image_ref = path.to_string_lossy().into_owned();
     Ok(json!({
         "t": "Para",
-        "c": [{ "t": "Image", "c": [["", [], []], [], [filename, ""]] }]
+        "c": [{ "t": "Image", "c": [["", [], []], [], [image_ref, ""]] }]
     }))
 }
 
@@ -257,7 +260,6 @@ mod tests {
     #[test]
     fn replace_rendered_writes_image_for_non_html() {
         let dir = std::env::temp_dir().join(format!("gazu-test-{:?}", std::thread::current().id()));
-        std::fs::create_dir_all(&dir).unwrap();
 
         let mut blocks = json!([mermaid("graph LR\n A-->B")]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
@@ -268,15 +270,9 @@ mod tests {
         assert_eq!(blocks[0]["t"], "Para");
         let image = &blocks[0]["c"][0];
         assert_eq!(image["t"], "Image");
-        let filename = image["c"][2][0].as_str().unwrap();
-        assert!(
-            filename.starts_with("gazu-") && filename.ends_with(".svg"),
-            "{filename}"
-        );
-        assert_eq!(
-            std::fs::read_to_string(dir.join(filename)).unwrap(),
-            "<svg/>"
-        );
+        let image_ref = image["c"][2][0].as_str().unwrap();
+        assert!(image_ref.ends_with(".svg"), "{image_ref}");
+        assert_eq!(std::fs::read_to_string(image_ref).unwrap(), "<svg/>");
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

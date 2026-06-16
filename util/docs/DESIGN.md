@@ -66,9 +66,9 @@ target) whether a rendered block becomes:
 - `RawBlock("html", "<svg>...</svg>")` — for formats in `HTML_FORMATS`
   (`src/pandoc.rs`), which pass raw HTML through (or translate it to the
   format's own raw-HTML syntax).
-- `Para[Image]` pointing at `gazu-<hash>.svg`, written to the current
-  directory — for everything else (`typst`, `latex`, ...), which drop raw
-  HTML.
+- `Para[Image]` pointing at `gazu/<hash>.svg`, written to a `gazu/`
+  subdirectory of the current directory — for everything else (`typst`,
+  `latex`, ...), which drop raw HTML.
 
 `HTML_FORMATS` is not a guess: it's measured against pandoc 3.7 by
 `util/check-html-formats.sh`, which runs a `RawBlock("html", ...)` AST
@@ -80,11 +80,13 @@ generation phase, after the filter has already exited and written its output.
 
 ### Image filenames
 
-`gazu-<hash>.svg` uses `DefaultHasher` (SipHash) over the SVG content. The
-hash only needs to (a) avoid collisions between distinct diagrams in one
-document and (b) let pandoc find the file by the path gazu wrote into the
-`Image` node — both within a single process run. `DefaultHasher`'s lack of a
-cross-version stability guarantee is irrelevant for this use.
+`gazu/<hash>.svg` — the `gazu/` directory groups all generated files for
+easy cleanup (`rm -rf gazu/`). The hash uses `DefaultHasher` (SipHash) over
+the SVG content. It only needs to (a) avoid collisions between distinct
+diagrams in one document and (b) let pandoc find the file by the path gazu
+wrote into the `Image` node — both within a single process run.
+`DefaultHasher`'s lack of a cross-version stability guarantee is irrelevant
+for this use.
 
 ### Failure handling
 

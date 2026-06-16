@@ -254,15 +254,16 @@ fn pandoc_typst_writes_svg_file_and_embeds_image() {
         "no image() in typst output: {typst}"
     );
 
-    let svgs: Vec<_> = std::fs::read_dir(&dir)
-        .expect("read temp dir")
+    let gazu_dir = dir.join("gazu");
+    let svgs: Vec<_> = std::fs::read_dir(&gazu_dir)
+        .expect("read gazu/ dir")
         .filter_map(|e| e.ok())
         .filter(|e| e.file_name().to_string_lossy().ends_with(".svg"))
         .collect();
     assert_eq!(
         svgs.len(),
         1,
-        "expected 1 svg file in {dir:?}, found {svgs:?}"
+        "expected 1 svg file in {gazu_dir:?}, found {svgs:?}"
     );
 
     std::fs::remove_dir_all(&dir).expect("cleanup temp dir");

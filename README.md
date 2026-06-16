@@ -44,8 +44,8 @@ pandoc input.md -o output.pdf --pdf-engine=weasyprint --filter gazu
 pandoc input.md -o output.pdf --pdf-engine=typst --filter gazu -V mainfont="Noto Sans"
 ```
 
-Depending on the output format, gazu may write `gazu-<hash>.svg` files to
-the current directory. See
+Depending on the output format, gazu may write SVG files to a `gazu/`
+subdirectory of the current directory. See
 [Behavior by output format](#behavior-by-output-format). For PDF output, see
 [Notes → PDF output](#pdf-output).
 
@@ -91,8 +91,9 @@ written:
 ### SVG file + Image
 
 Other formats (`typst`, `latex`, etc.) drop raw HTML. gazu writes
-`gazu-<hash>.svg` to the current directory and embeds it as an `Image`. The
-file remains after conversion.
+`gazu/<hash>.svg` to a `gazu/` subdirectory (created if absent) and embeds
+it as an `Image`. The files remain after conversion and can be removed with
+`rm -rf gazu/`.
 
 ## Notes
 
