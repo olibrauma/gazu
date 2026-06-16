@@ -1,5 +1,5 @@
 /target/
-# Temporary SVGs gazu writes to the CWD for typst etc. PDF output
-gazu-*.svg
+# SVG files gazu writes for typst etc. PDF output
+gazu/
 # Log mermaid-filter writes to the CWD when util/bench/bench.sh runs it
 mermaid-filter.err
