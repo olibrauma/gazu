@@ -78,15 +78,27 @@ bumping the pandoc version.
 The SVG file can't be deleted by gazu — pandoc reads it during its own
 generation phase, after the filter has already exited and written its output.
 
-### Image filenames
+### Image filenames and output directory
 
-`gazu/<hash>.svg` — the `gazu/` directory groups all generated files for
-easy cleanup (`rm -rf gazu/`). The hash uses `DefaultHasher` (SipHash) over
-the SVG content. It only needs to (a) avoid collisions between distinct
-diagrams in one document and (b) let pandoc find the file by the path gazu
-wrote into the `Image` node — both within a single process run.
-`DefaultHasher`'s lack of a cross-version stability guarantee is irrelevant
-for this use.
+Generated SVG files are written to a `gazu/` subdirectory of pandoc's CWD
+(created on first use if absent), with each file named `<hash>.svg`.
+
+**Why a subdirectory?** gazu cannot delete its own output — pandoc reads the
+SVG files during its own generation phase, after the filter has already
+exited. Scattering files directly in the CWD makes cleanup a glob operation
+(`rm gazu-*.svg`) that is easy to overlook. Grouping them under `gazu/`
+makes removal unambiguous and one command (`rm -rf gazu/`).
+
+**Why not a hidden directory (`.gazu/`)?** Because gazu requires the user to
+perform cleanup manually, hiding the directory would obscure the fact that
+files were left behind. A visible `gazu/` directory is a clear signal that
+generated artifacts exist and need to be managed.
+
+The hash uses `DefaultHasher` (SipHash) over the SVG content. It only needs
+to (a) avoid collisions between distinct diagrams in one document and (b) let
+pandoc find the file by the path gazu wrote into the `Image` node — both
+within a single process run. `DefaultHasher`'s lack of a cross-version
+stability guarantee is irrelevant for this use.
 
 ### Failure handling
 
