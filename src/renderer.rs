@@ -6,7 +6,6 @@
 
 use anyhow::Result;
 use sekien::{render_stream, RenderOutcome};
-use std::sync::mpsc;
 
 /// Result of rendering a single block.
 pub enum BlockOutcome {
@@ -17,9 +16,6 @@ pub enum BlockOutcome {
 
 /// Renders `diagrams` in a single batch via sekien, returning `BlockOutcome`
 /// in input order.
-///
-/// `render_stream` calls `on_result` once per diagram in the same order as
-/// `diagrams`, so we can just forward each result to a channel and collect.
 pub fn render_blocks(
     diagrams: Vec<String>,
     config_json: Option<&str>,
@@ -28,14 +24,13 @@ pub fn render_blocks(
         return Ok(Vec::new());
     }
 
-    let (tx, rx) = mpsc::channel();
-    render_stream(diagrams, config_json, move |_id, outcome| {
-        let mapped = match outcome {
+    let mut results = Vec::with_capacity(diagrams.len());
+    render_stream(diagrams, config_json, |_id, outcome| {
+        results.push(match outcome {
             RenderOutcome::Svg(svg) => BlockOutcome::Rendered(svg),
             RenderOutcome::Error(err) => BlockOutcome::Failed(err),
-        };
-        let _ = tx.send(mapped);
+        });
     })?;
 
-    Ok(rx.into_iter().collect())
+    Ok(results)
 }

@@ -1,9 +1,9 @@
 use crate::renderer::{self, BlockOutcome};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use serde_json::{json, Value};
 use std::hash::{Hash, Hasher};
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Formats that pass `RawBlock("html", svg)` through as-is (or translate it
 /// into the format's own raw-HTML syntax). For all other formats (typst,
@@ -43,9 +43,7 @@ const HTML_FORMATS: &[&str] = &[
 pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()> {
     let mut ast: Value = serde_json::from_str(input).context("invalid Pandoc AST")?;
 
-    ast["blocks"]
-        .as_array()
-        .context("no blocks in Pandoc AST")?;
+    ensure!(ast["blocks"].is_array(), "no blocks in Pandoc AST");
     let mermaid_blocks = collect_mermaid_mut(&mut ast["blocks"]);
 
     if mermaid_blocks.is_empty() {
@@ -55,7 +53,23 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
 
     let diagrams = mermaid_blocks.iter().map(|b| mermaid_source(b)).collect();
     let outcomes = renderer::render_blocks(diagrams, config_json)?;
-    for warning in apply_outcomes(Path::new("gazu"), format, mermaid_blocks, outcomes)? {
+    let output_dir = (!HTML_FORMATS.contains(&format)).then_some(Path::new("gazu"));
+    let (replacements, files, warnings) = plan_outcomes(output_dir, outcomes);
+
+    if let Some(dir) = output_dir {
+        std::fs::create_dir_all(dir)
+            .with_context(|| format!("failed to create directory {}", dir.display()))?;
+        for (path, svg) in &files {
+            std::fs::write(path, svg)
+                .with_context(|| format!("failed to write {}", path.display()))?;
+        }
+    }
+    for (block, replacement) in mermaid_blocks.into_iter().zip(replacements) {
+        if let Some(v) = replacement {
+            *block = v;
+        }
+    }
+    for warning in warnings {
         eprintln!("{warning}");
     }
 
@@ -84,63 +98,57 @@ fn mermaid_source(block: &Value) -> String {
     block["c"][1].as_str().unwrap_or("").to_owned()
 }
 
-/// Applies `outcomes` 1:1 to the blocks collected by `collect_mermaid_mut`.
+/// Computes replacement values and files to write for each outcome. Pure.
 ///
-/// A successful block becomes `RawBlock("html", svg)` if `format` passes raw
-/// HTML through, or otherwise has its SVG written to a file under `dir` and
-/// is replaced with `Para[Image]`. A failed block is left as the original
-/// `CodeBlock`, and a warning message is pushed onto the returned `Vec`
-/// (the caller prints it).
-fn apply_outcomes(
-    dir: &Path,
-    format: &str,
-    blocks: Vec<&mut Value>,
+/// Returns:
+/// - `replacements`: `Some(v)` to replace the block, `None` to leave it unchanged
+/// - `files`: SVG files to write, as `(path, content)` pairs
+/// - `warnings`: one entry per failed block
+fn plan_outcomes(
+    output_dir: Option<&Path>,
     outcomes: Vec<BlockOutcome>,
-) -> Result<Vec<String>> {
-    let raw_html_ok = HTML_FORMATS.contains(&format);
+) -> (Vec<Option<Value>>, Vec<(PathBuf, String)>, Vec<String>) {
+    let mut replacements = Vec::with_capacity(outcomes.len());
+    let mut files = Vec::new();
     let mut warnings = Vec::new();
-    for (i, (block, outcome)) in blocks.into_iter().zip(outcomes).enumerate() {
+    for (i, outcome) in outcomes.into_iter().enumerate() {
         match outcome {
             BlockOutcome::Rendered(svg) => {
-                *block = if raw_html_ok {
-                    json!({ "t": "RawBlock", "c": ["html", svg] })
-                } else {
-                    image_block(dir, &svg)?
-                };
+                replacements.push(Some(match output_dir {
+                    None => json!({ "t": "RawBlock", "c": ["html", svg] }),
+                    Some(dir) => {
+                        let (path, value) = image_block(dir, &svg);
+                        files.push((path, svg));
+                        value
+                    }
+                }));
             }
-            BlockOutcome::Failed(err) => warnings.push(format!(
-                "warning: gazu: mermaid block {} failed to render:\n{err}",
-                i + 1
-            )),
+            BlockOutcome::Failed(err) => {
+                replacements.push(None);
+                warnings.push(format!(
+                    "warning: gazu: mermaid block {} failed to render:\n{err}",
+                    i + 1
+                ));
+            }
         }
     }
-    Ok(warnings)
+    (replacements, files, warnings)
 }
 
-/// Writes `svg` to a file under `dir` and returns a `Para[Image]` block that
-/// references it.
-///
-/// Output formats that don't pass raw HTML through (typst, latex, etc.)
-/// can't embed SVG inline, so it's converted to an `Image` node backed by a
-/// file. `dir` must be a relative path within pandoc's CWD, since formats
-/// like typst resolve image paths from there. The file persists after the
-/// filter exits because pandoc reads it during its own generation phase.
-fn image_block(dir: &Path, svg: &str) -> Result<Value> {
+/// Returns the output path and a `Para[Image]` block that references it.
+/// Pure: no IO.
+fn image_block(dir: &Path, svg: &str) -> (PathBuf, Value) {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     svg.hash(&mut hasher);
-    let filename = format!("{:016x}.svg", hasher.finish());
-    let path = dir.join(&filename);
-
-    std::fs::create_dir_all(dir)
-        .with_context(|| format!("failed to create directory {}", dir.display()))?;
-    std::fs::write(&path, svg)
-        .with_context(|| format!("failed to write {}", path.display()))?;
-
+    let path = dir.join(format!("{:016x}.svg", hasher.finish()));
     let image_ref = path.to_string_lossy().into_owned();
-    Ok(json!({
-        "t": "Para",
-        "c": [{ "t": "Image", "c": [["", [], []], [], [image_ref, ""]] }]
-    }))
+    (
+        path,
+        json!({
+            "t": "Para",
+            "c": [{ "t": "Image", "c": [["", [], []], [], [image_ref, ""]] }]
+        }),
+    )
 }
 
 fn is_mermaid_block(block: &Value) -> bool {
@@ -249,42 +257,34 @@ mod tests {
 
     #[test]
     fn replace_rendered_substitutes_svg_for_html() {
-        let mut blocks = json!([mermaid("graph LR\n A-->B")]);
-        let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        let warnings = apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
+        let (replacements, files, warnings) = plan_outcomes(None, outcomes);
         assert!(warnings.is_empty());
-        assert_eq!(blocks[0], raw("<svg/>"));
+        assert!(files.is_empty());
+        assert_eq!(replacements, vec![Some(raw("<svg/>"))]);
     }
 
     #[test]
-    fn replace_rendered_writes_image_for_non_html() {
-        let dir = std::env::temp_dir().join(format!("gazu-test-{:?}", std::thread::current().id()));
-
-        let mut blocks = json!([mermaid("graph LR\n A-->B")]);
-        let mermaid_blocks = collect_mermaid_mut(&mut blocks);
+    fn replace_rendered_plans_image_for_non_html() {
+        let dir = Path::new("gazu");
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        let warnings = apply_outcomes(&dir, "typst", mermaid_blocks, outcomes).unwrap();
+        let (replacements, files, warnings) = plan_outcomes(Some(dir), outcomes);
         assert!(warnings.is_empty());
-
-        assert_eq!(blocks[0]["t"], "Para");
-        let image = &blocks[0]["c"][0];
-        assert_eq!(image["t"], "Image");
-        let image_ref = image["c"][2][0].as_str().unwrap();
-        assert!(image_ref.ends_with(".svg"), "{image_ref}");
-        assert_eq!(std::fs::read_to_string(image_ref).unwrap(), "<svg/>");
-
-        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(files.len(), 1);
+        let (path, svg) = &files[0];
+        assert!(path.to_string_lossy().ends_with(".svg"), "{path:?}");
+        assert_eq!(svg, "<svg/>");
+        let replacement = replacements[0].as_ref().unwrap();
+        assert_eq!(replacement["t"], "Para");
+        assert_eq!(replacement["c"][0]["t"], "Image");
     }
 
     #[test]
     fn replace_failed_leaves_original_and_warns() {
-        let orig = mermaid("bad diagram");
-        let mut blocks = json!([orig.clone()]);
-        let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Failed("Lexical error".to_owned())];
-        let warnings = apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
-        assert_eq!(blocks[0], orig);
+        let (replacements, files, warnings) = plan_outcomes(None, outcomes);
+        assert_eq!(replacements, vec![None]);
+        assert!(files.is_empty());
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("Lexical error"), "{warnings:?}");
     }
@@ -298,7 +298,12 @@ mod tests {
         }]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
-        apply_outcomes(Path::new("."), "html", mermaid_blocks, outcomes).unwrap();
+        let (replacements, _, _) = plan_outcomes(None, outcomes);
+        for (block, replacement) in mermaid_blocks.into_iter().zip(replacements) {
+            if let Some(v) = replacement {
+                *block = v;
+            }
+        }
         assert_eq!(blocks[0]["c"][1][0], raw("<svg/>"));
     }
 }
