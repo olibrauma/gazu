@@ -1,6 +1,6 @@
 # gazu — Pandoc filter for Mermaid
 
-A Pandoc filter for Mermaid. **Fast**, **light**, **small**, and **OS-native**.
+A Pandoc filter for Mermaid. **Light**, **small**, and **fast**.
 
 ## Install
 
