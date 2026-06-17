@@ -37,6 +37,13 @@ fn load_config_json(path: &str) -> Result<String> {
 }
 
 fn main() -> Result<()> {
+    // With no arguments, gazu was invoked directly rather than by pandoc.
+    // Show help, since running standalone has no useful effect.
+    if std::env::args().len() == 1 {
+        println!("{}", usage());
+        return Ok(());
+    }
+
     // Pandoc passes the output format name as the sole positional argument
     // when invoking a filter (e.g. "html", "typst", "latex").
     let mut format = "html".to_owned();
