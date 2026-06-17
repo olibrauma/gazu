@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `gazu` now shows help when invoked directly from a terminal (stdin is a TTY),
+  rather than blocking on input. Pandoc always pipes the AST to stdin, so TTY
+  stdin reliably indicates a direct invocation with no useful input to process.
+
 ## [0.2.0] — 2026-06-17
 
 ### Added
