@@ -30,18 +30,19 @@ enum Command {
 /// `Command::Filter` is only returned when stdin is a pipe — i.e. pandoc is
 /// actually feeding an AST.
 fn resolve_command() -> Command {
+    let mut format = "html".to_owned();
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--help" | "-h" => return Command::Help,
             "--version" | "-v" => return Command::Version,
-            s if !s.starts_with('-') => return Command::Filter(s.to_owned()),
+            s if !s.starts_with('-') => format = s.to_owned(),
             _ => {}
         }
     }
     if io::stdin().is_terminal() {
         return Command::Help;
     }
-    Command::Filter("html".to_owned())
+    Command::Filter(format)
 }
 
 /// Reads the JSON file pointed to by `GAZU_CONFIG` and turns it into a
