@@ -2,7 +2,7 @@ mod pandoc;
 mod renderer;
 
 use anyhow::{bail, Context, Result};
-use std::io::{self, Read};
+use std::io::{self, IsTerminal, Read};
 
 fn usage() -> &'static str {
     "gazu — Pandoc filter for Mermaid diagrams
@@ -37,9 +37,9 @@ fn load_config_json(path: &str) -> Result<String> {
 }
 
 fn main() -> Result<()> {
-    // With no arguments, gazu was invoked directly rather than by pandoc.
-    // Show help, since running standalone has no useful effect.
-    if std::env::args().len() == 1 {
+    // Pandoc always pipes the AST to stdin, so a TTY stdin means the user
+    // invoked gazu directly. Show help instead of blocking on input.
+    if io::stdin().is_terminal() {
         println!("{}", usage());
         return Ok(());
     }
