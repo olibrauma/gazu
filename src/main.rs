@@ -37,13 +37,6 @@ fn load_config_json(path: &str) -> Result<String> {
 }
 
 fn main() -> Result<()> {
-    // Pandoc always pipes the AST to stdin, so a TTY stdin means the user
-    // invoked gazu directly. Show help instead of blocking on input.
-    if io::stdin().is_terminal() {
-        println!("{}", usage());
-        return Ok(());
-    }
-
     // Pandoc passes the output format name as the sole positional argument
     // when invoking a filter (e.g. "html", "typst", "latex").
     let mut format = "html".to_owned();
@@ -64,6 +57,13 @@ fn main() -> Result<()> {
             _ if !arg.starts_with('-') => format = arg,
             _ => {} // ignore unknown flags
         }
+    }
+
+    // Pandoc always pipes the AST to stdin, so a TTY stdin means the user
+    // invoked gazu directly. Show help instead of blocking on input.
+    if io::stdin().is_terminal() {
+        println!("{}", usage());
+        return Ok(());
     }
 
     let config_json = match std::env::var("GAZU_CONFIG") {
