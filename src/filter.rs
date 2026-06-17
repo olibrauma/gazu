@@ -1,5 +1,5 @@
-use crate::renderer::{self, BlockOutcome};
 use anyhow::{ensure, Context, Result};
+use sekien::{render_stream, RenderOutcome};
 use serde_json::{json, Value};
 use std::hash::{Hash, Hasher};
 use std::io::{self, Write};
@@ -51,8 +51,10 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
         return Ok(());
     }
 
-    let diagrams = mermaid_blocks.iter().map(|b| mermaid_source(b)).collect();
-    let outcomes = renderer::render_blocks(diagrams, config_json)?;
+    let diagrams: Vec<String> = mermaid_blocks.iter().map(|b| mermaid_source(b)).collect();
+    let mut outcomes = Vec::with_capacity(diagrams.len());
+    render_stream(diagrams, config_json, |outcome| outcomes.push(outcome))?;
+
     let output_dir = (!HTML_FORMATS.contains(&format)).then_some(Path::new("gazu"));
     let plan = plan_outcomes(output_dir, outcomes);
 
@@ -103,13 +105,13 @@ struct Plan {
 /// - `replacements`: `Some(v)` to replace the block, `None` to leave it unchanged
 /// - `files`: SVG files to write, as `(path, content)` pairs
 /// - `warnings`: one entry per failed block
-fn plan_outcomes(output_dir: Option<&Path>, outcomes: Vec<BlockOutcome>) -> Plan {
+fn plan_outcomes(output_dir: Option<&Path>, outcomes: Vec<RenderOutcome>) -> Plan {
     let mut replacements = Vec::with_capacity(outcomes.len());
     let mut files = Vec::new();
     let mut warnings = Vec::new();
     for (i, outcome) in outcomes.into_iter().enumerate() {
         match outcome {
-            BlockOutcome::Rendered(svg) => {
+            RenderOutcome::Svg(svg) => {
                 replacements.push(Some(match output_dir {
                     None => json!({ "t": "RawBlock", "c": ["html", svg] }),
                     Some(dir) => {
@@ -119,7 +121,7 @@ fn plan_outcomes(output_dir: Option<&Path>, outcomes: Vec<BlockOutcome>) -> Plan
                     }
                 }));
             }
-            BlockOutcome::Failed(err) => {
+            RenderOutcome::Error(err) => {
                 replacements.push(None);
                 warnings.push(format!(
                     "warning: gazu: mermaid block {} failed to render:\n{err}",
@@ -173,6 +175,7 @@ fn is_mermaid_block(block: &Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sekien::RenderOutcome;
     use serde_json::json;
 
     fn mermaid(src: &str) -> Value {
@@ -267,7 +270,7 @@ mod tests {
 
     #[test]
     fn replace_rendered_substitutes_svg_for_html() {
-        let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
+        let outcomes = vec![RenderOutcome::Svg("<svg/>".to_owned())];
         let plan = plan_outcomes(None, outcomes);
         assert!(plan.warnings.is_empty());
         assert!(plan.files.is_empty());
@@ -277,7 +280,7 @@ mod tests {
     #[test]
     fn replace_rendered_plans_image_for_non_html() {
         let dir = Path::new("gazu");
-        let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
+        let outcomes = vec![RenderOutcome::Svg("<svg/>".to_owned())];
         let plan = plan_outcomes(Some(dir), outcomes);
         assert!(plan.warnings.is_empty());
         assert_eq!(plan.files.len(), 1);
@@ -291,7 +294,7 @@ mod tests {
 
     #[test]
     fn replace_failed_leaves_original_and_warns() {
-        let outcomes = vec![BlockOutcome::Failed("Lexical error".to_owned())];
+        let outcomes = vec![RenderOutcome::Error("Lexical error".to_owned())];
         let plan = plan_outcomes(None, outcomes);
         assert_eq!(plan.replacements, vec![None]);
         assert!(plan.files.is_empty());
@@ -311,7 +314,7 @@ mod tests {
             "c": [["", [], []], [inner_mermaid]]
         }]);
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
-        let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
+        let outcomes = vec![RenderOutcome::Svg("<svg/>".to_owned())];
         let plan = plan_outcomes(None, outcomes);
         apply_replacements(mermaid_blocks, plan.replacements);
         assert_eq!(blocks[0]["c"][1][0], raw("<svg/>"));

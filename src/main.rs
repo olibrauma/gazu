@@ -1,7 +1,6 @@
-mod pandoc;
-mod renderer;
+mod filter;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use std::io::{self, IsTerminal, Read};
 
 fn usage() -> &'static str {
@@ -45,22 +44,6 @@ fn resolve_command() -> Command {
     Command::Filter(format)
 }
 
-/// Reads the JSON file pointed to by `GAZU_CONFIG` and turns it into a
-/// config_json string suitable for `render_stream`.
-///
-/// Expects the same format as mmdc's `--configFile` (a JSON object passed to
-/// mermaid.initialize()).
-fn load_config_json(path: &str) -> Result<String> {
-    let raw = std::fs::read_to_string(path)
-        .with_context(|| format!("cannot read config file '{path}' (from GAZU_CONFIG)"))?;
-    let value: serde_json::Value =
-        serde_json::from_str(&raw).with_context(|| format!("invalid JSON in '{path}'"))?;
-    if !value.is_object() {
-        bail!("'{path}': expected a JSON object");
-    }
-    Ok(value.to_string())
-}
-
 fn main() -> Result<()> {
     match resolve_command() {
         Command::Help => {
@@ -78,7 +61,10 @@ fn main() -> Result<()> {
         Command::Filter(format) => {
             let config_json = std::env::var("GAZU_CONFIG")
                 .ok()
-                .map(|path| load_config_json(&path))
+                .map(|path| {
+                    std::fs::read_to_string(&path)
+                        .with_context(|| format!("failed to read GAZU_CONFIG '{path}'"))
+                })
                 .transpose()?;
 
             let mut input = String::new();
@@ -86,7 +72,7 @@ fn main() -> Result<()> {
                 .read_to_string(&mut input)
                 .context("failed to read Pandoc AST from stdin")?;
 
-            pandoc::filter(&input, &format, config_json.as_deref())
+            filter::filter(&input, &format, config_json.as_deref())
         }
     }
 }
