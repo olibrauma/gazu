@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated sekien to 0.4.0 (mermaid.js 11.15.0).
+- `GAZU_CONFIG` error messages now follow sekien's style. File-not-found:
+  `failed to read GAZU_CONFIG '<path>': <os error>`. Invalid JSON or
+  non-object: reported by sekien as `invalid config_json: <detail>`.
 
 ## [0.2.0] — 2026-06-17
 
