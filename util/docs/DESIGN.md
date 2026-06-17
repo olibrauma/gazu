@@ -163,6 +163,22 @@ control. Rather than special-case or auto-configure LaTeX, the README points
 users at `--pdf-engine=weasyprint` or `=typst`, both of which work with no
 extra setup.
 
+### Why `"html"` is the default format when none is provided
+
+Pandoc always passes the output format as a positional argument when invoking
+a filter, so `resolve_command()` receiving no positional argument means gazu
+was invoked directly by the user, not by pandoc. If stdin is a TTY in that
+case, `Command::Help` is returned. If stdin is a pipe (e.g. manual testing
+with `echo '...' | gazu`), `Command::Filter("html")` is returned as a
+fallback.
+
+`"html"` was considered for `Option<String>` to make "no format specified"
+explicit in the type. Rejected: `None` would still need to be treated as
+`"html"` inside `filter()`, so the `Option` layer would encode a distinction
+that has no effect on behaviour — the type would be lying. A plain `"html"`
+default is honest and produces the least surprising behaviour (inline SVG, no
+files written).
+
 ### Why no PNG output
 
 Raised and rejected. Converting SVG to PNG would add a real feature surface

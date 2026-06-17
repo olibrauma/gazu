@@ -26,7 +26,10 @@ enum Command {
     Filter(String),
 }
 
-fn parse_args() -> Command {
+/// Determines what to do by combining CLI flags with runtime state (TTY check).
+/// `Command::Filter` is only returned when stdin is a pipe — i.e. pandoc is
+/// actually feeding an AST.
+fn resolve_command() -> Command {
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--help" | "-h" => return Command::Help,
@@ -34,6 +37,9 @@ fn parse_args() -> Command {
             s if !s.starts_with('-') => return Command::Filter(s.to_owned()),
             _ => {}
         }
+    }
+    if io::stdin().is_terminal() {
+        return Command::Help;
     }
     Command::Filter("html".to_owned())
 }
@@ -55,7 +61,7 @@ fn load_config_json(path: &str) -> Result<String> {
 }
 
 fn main() -> Result<()> {
-    match parse_args() {
+    match resolve_command() {
         Command::Help => {
             println!("{}", usage());
             Ok(())
@@ -69,13 +75,6 @@ fn main() -> Result<()> {
             Ok(())
         }
         Command::Filter(format) => {
-            // Pandoc always pipes the AST to stdin, so a TTY stdin means the
-            // user invoked gazu directly. Show help instead of blocking.
-            if io::stdin().is_terminal() {
-                println!("{}", usage());
-                return Ok(());
-            }
-
             let config_json = match std::env::var("GAZU_CONFIG") {
                 Ok(path) => Some(load_config_json(&path)?),
                 Err(_) => None,
