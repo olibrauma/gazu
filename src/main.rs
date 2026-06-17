@@ -76,10 +76,10 @@ fn main() -> Result<()> {
             Ok(())
         }
         Command::Filter(format) => {
-            let config_json = match std::env::var("GAZU_CONFIG") {
-                Ok(path) => Some(load_config_json(&path)?),
-                Err(_) => None,
-            };
+            let config_json = std::env::var("GAZU_CONFIG")
+                .ok()
+                .map(|path| load_config_json(&path))
+                .transpose()?;
 
             let mut input = String::new();
             io::stdin()

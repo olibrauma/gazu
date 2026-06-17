@@ -64,14 +64,8 @@ pub fn filter(input: &str, format: &str, config_json: Option<&str>) -> Result<()
                 .with_context(|| format!("failed to write {}", path.display()))?;
         }
     }
-    for (block, replacement) in mermaid_blocks.into_iter().zip(plan.replacements) {
-        if let Some(v) = replacement {
-            *block = v;
-        }
-    }
-    for warning in plan.warnings {
-        eprintln!("{warning}");
-    }
+    apply_replacements(mermaid_blocks, plan.replacements);
+    plan.warnings.iter().for_each(|w| eprintln!("{w}"));
 
     let out = serde_json::to_string(&ast).context("failed to serialize Pandoc AST")?;
     io::stdout()
@@ -138,6 +132,16 @@ fn plan_outcomes(output_dir: Option<&Path>, outcomes: Vec<BlockOutcome>) -> Plan
         replacements,
         files,
         warnings,
+    }
+}
+
+/// Applies replacement values to mermaid blocks in place. `None` means keep the
+/// original (render failed); `Some(v)` replaces the block with `v`.
+fn apply_replacements(blocks: Vec<&mut Value>, replacements: Vec<Option<Value>>) {
+    for (block, replacement) in blocks.into_iter().zip(replacements) {
+        if let Some(v) = replacement {
+            *block = v;
+        }
     }
 }
 
@@ -309,11 +313,7 @@ mod tests {
         let mermaid_blocks = collect_mermaid_mut(&mut blocks);
         let outcomes = vec![BlockOutcome::Rendered("<svg/>".to_owned())];
         let plan = plan_outcomes(None, outcomes);
-        for (block, replacement) in mermaid_blocks.into_iter().zip(plan.replacements) {
-            if let Some(v) = replacement {
-                *block = v;
-            }
-        }
+        apply_replacements(mermaid_blocks, plan.replacements);
         assert_eq!(blocks[0]["c"][1][0], raw("<svg/>"));
     }
 }

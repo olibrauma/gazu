@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [0.3.0] — 2026-06-17
+
+### Added
 
 - `gazu` now shows help when invoked directly from a terminal (stdin is a TTY),
   rather than blocking on input. Pandoc always pipes the AST to stdin, so TTY
   stdin reliably indicates a direct invocation with no useful input to process.
+
+### Changed
+
+- Updated sekien to 0.4.0 (mermaid.js 11.15.0).
 
 ## [0.2.0] — 2026-06-17
 
@@ -56,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (same format as `mmdc --configFile`).
 - Prebuilt binaries for Linux x86_64, macOS arm64, and Windows x86_64.
 
-[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/olibrauma/gazu/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/olibrauma/gazu/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/olibrauma/gazu/releases/tag/v0.1.0

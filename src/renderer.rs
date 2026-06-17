@@ -25,7 +25,7 @@ pub fn render_blocks(
     }
 
     let mut results = Vec::with_capacity(diagrams.len());
-    render_stream(diagrams, config_json, |_id, outcome| {
+    render_stream(diagrams, config_json, |outcome| {
         results.push(match outcome {
             RenderOutcome::Svg(svg) => BlockOutcome::Rendered(svg),
             RenderOutcome::Error(err) => BlockOutcome::Failed(err),
