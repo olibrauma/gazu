@@ -1,9 +1,9 @@
 #!/bin/bash
-# Checks or regenerates the src/pandoc.rs HTML_FORMATS allowlist by measurement.
+# Checks or regenerates the src/filter.rs HTML_FORMATS allowlist by measurement.
 #
 # Usage:
 #   util/check-html-formats.sh           — print PASS for each format that passes SVG through
-#   util/check-html-formats.sh --check   — exit non-zero if HTML_FORMATS in src/pandoc.rs
+#   util/check-html-formats.sh --check   — exit non-zero if HTML_FORMATS in src/filter.rs
 #                                          is out of date for the installed pandoc version
 #
 # Runs a Pandoc AST containing RawBlock("html", "<svg>...</svg>") through
@@ -11,7 +11,7 @@
 # content comes out as-is (or in the format's own raw-HTML syntax).
 #
 # When bumping the pandoc version, re-run without --check and revisit
-# HTML_FORMATS / the comment in src/pandoc.rs.
+# HTML_FORMATS / the comment in src/filter.rs.
 #
 # Notes:
 #   - chunkedhtml is excluded because it's a multi-file writer (requires
@@ -44,7 +44,7 @@ done
 
 if [[ "${1:-}" == "--check" ]]; then
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    pandoc_rs="$script_dir/../src/pandoc.rs"
+    pandoc_rs="$script_dir/../src/filter.rs"
 
     actual=$(printf '%s\n' "${passing[@]}" | sort)
     expected=$(awk '/const HTML_FORMATS/,/^\];/' "$pandoc_rs" \
@@ -53,9 +53,9 @@ if [[ "${1:-}" == "--check" ]]; then
     if diff <(echo "$expected") <(echo "$actual") > /dev/null; then
         echo "HTML_FORMATS is up to date (pandoc $(pandoc --version | head -1))."
     else
-        echo "HTML_FORMATS in src/pandoc.rs is out of date for $(pandoc --version | head -1)."
+        echo "HTML_FORMATS in src/filter.rs is out of date for $(pandoc --version | head -1)."
         echo ""
-        echo "Diff (- expected in pandoc.rs, + actually measured):"
+        echo "Diff (- expected in filter.rs, + actually measured):"
         diff <(echo "$expected") <(echo "$actual") || true
         echo ""
         echo "Re-run util/check-html-formats.sh (without --check) to see the current list."
