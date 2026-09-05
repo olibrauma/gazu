@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "gazu"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "sekien",
@@ -1661,9 +1661,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "sekien"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98156cbe1ee5bf55d497fb45d5961229eff38f3d1c3334da148bf84a97f02a0d"
+checksum = "96f88e7889a2c559ae1c404488d86b67ef6da24626ae84d0235a791d13cbd948"
 dependencies = [
  "anyhow",
  "serde",
