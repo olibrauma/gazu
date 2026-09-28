@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-09-29
+
+### Changed
+
+- Updated sekien to 0.4.3 (mermaid.js unchanged at 11.17.2). It updates wry
+  to 0.57 and tao to 0.37, and no longer needs the libdbus development
+  headers to build.
+- If sekien's rendering window closes before every diagram is rendered, gazu
+  now exits with an error instead of leaving the remaining Mermaid blocks
+  unrendered without a warning (fixed in sekien 0.4.3).
+- Declared `rust-version = "1.88"`, the minimum required by sekien 0.4.3 and
+  gazu's other dependencies. Earlier versions declared none.
+
 ## [0.3.2] — 2026-09-05
 
 ### Changed
@@ -77,7 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (same format as `mmdc --configFile`).
 - Prebuilt binaries for Linux x86_64, macOS arm64, and Windows x86_64.
 
-[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/olibrauma/gazu/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/olibrauma/gazu/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/olibrauma/gazu/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/olibrauma/gazu/compare/v0.2.0...v0.3.0
