@@ -31,6 +31,19 @@ dnf install xorg-x11-server-Xvfb  # Fedora
 A display connection is required (uses the OS-native WebView: WKWebView /
 WebView2).
 
+On Windows, gazu 0.3 and earlier could not render at all (WebView2 error
+0x80070057, [sekien#5](https://github.com/olibrauma/sekien/issues/5)). gazu
+0.4 renders on the GitHub Actions Windows runner, where its tests run in CI,
+but has not yet been tried on a desktop Windows machine.
+
+### WebView version
+
+The bundled mermaid.js 12 targets ES2024, so the OS WebView must be recent
+enough: WebKitGTK 2.44 or later on Linux (on Ubuntu 22.04, the
+`jammy-updates` package rather than the original 2.36), and Safari 17.4 or
+later on macOS (WKWebView uses the system WebKit, which is updated with
+Safari). WebView2 on Windows is evergreen.
+
 ## Usage
 
 ```bash
@@ -72,6 +85,29 @@ format as [mmdc](https://github.com/mermaid-js/mermaid-cli)'s `--configFile`:
 GAZU_CONFIG=mermaid-config.json \
   pandoc input.md -o output.html --filter gazu
 ```
+
+### Output from gazu 0.3 and earlier
+
+gazu 0.4 bundles mermaid.js 12, which changed the defaults: ELK layout
+instead of dagre, the `redux-color` theme and `neo` look, and narrower
+flowchart/state nodes and label wrapping. To render as gazu 0.3 (mermaid.js
+11) did, use this `GAZU_CONFIG`:
+
+```json
+{
+  "theme": "default",
+  "look": "classic",
+  "flowchart": { "layout": "dagre", "minNodeWidth": 0, "wrappingWidth": 200 },
+  "state": { "layout": "dagre", "minNodeWidth": 0, "wrappingWidth": 200 },
+  "class": { "layout": "dagre" },
+  "er": { "layout": "dagre" },
+  "requirement": { "layout": "dagre" }
+}
+```
+
+Set `layout` per diagram type as above, not at the top level: a top-level
+`layout: "dagre"` also moves mindmaps off their own layout. Mindmaps shift
+by a few pixels either way.
 
 ## Behavior by output format
 
@@ -115,15 +151,16 @@ PATH to render the embedded SVG — without them, the PDF build fails. Use
 gazu is smaller, faster, and lighter than
 [mermaid-filter](https://github.com/raghur/mermaid-filter):
 
-**Linux x86_64**
+**Linux x86_64** (gazu 0.4.0)
 
 | Metric | gazu | mermaid-filter | Advantage |
 |---|---|---|---|
-| Install size | **5.0 MB** | ~568 MB | **99% smaller** |
-| Speed (3 diagrams) | **~2.0 s** | ~14.8 s | **~7x faster** |
-| Memory (RSS) | **~446 MB** | ~849 MB | **~47% less** |
+| Install size | **7.1 MB** | ~568 MB | **99% smaller** |
+| Speed (3 diagrams) | **~1.3 s** | ~7.9 s | **~6x faster** |
+| Memory (RSS) | **~566 MB** | ~855 MB | **~34% less** |
 
-**Apple Silicon (M-series)**
+**Apple Silicon (M-series)** (gazu 0.1.0, mermaid.js 11.14.0; not yet
+re-measured for 0.4)
 
 | Metric | gazu | mermaid-filter | Advantage |
 |---|---|---|---|
@@ -133,8 +170,10 @@ gazu is smaller, faster, and lighter than
 mermaid-filter spawns `mmdc` (Puppeteer/Chromium) per block; gazu renders the
 whole document in one batch.
 
-- Median of 10 runs, `util/bench/fixture.md` (3 diagrams) — see `./util/bench/bench.sh`
-- Both use mermaid.js 11.14.0 (mermaid-filter 1.4.x / mmdc 11.14.0)
+- `util/bench/fixture.md` (3 diagrams) — see `./util/bench/bench.sh`
+- Linux: gazu 0.4.0 (mermaid.js 12.0.0) vs. mermaid-filter 1.4.7 (mmdc
+  10.9.1, mermaid.js 10.9.6). Speed is the median of 10 runs alternating
+  between the two filters; RSS is the median of 10 runs of `bench.sh`.
 - Speed/Memory: filter process + children (Xvfb, WebKit, mmdc, Chromium), not pandoc itself
 - Install size: gazu's binary vs. mermaid-filter's npm package + Puppeteer's Chromium download (Linux only)
 - On Apple Silicon, mermaid-filter's bundled Chromium runs under Rosetta 2 (no

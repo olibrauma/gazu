@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-01
+
+### Changed
+
+- **Breaking**: Updated sekien to 0.5.1, which bundles mermaid.js 12.0.0
+  (matching mermaid-cli 12.0.0). The same document now renders differently
+  by default:
+  - ELK layout instead of dagre (flowchart, state, class, ER, requirement
+    and use case diagrams).
+  - The `redux-color` theme and `neo` look for flowchart, sequence, class,
+    state, ER, requirement and use case diagrams.
+  - Flowchart and state nodes have a minimum width of 120px, and flowchart
+    labels wrap at 120px instead of 200px.
+
+  See [Output from gazu 0.3 and earlier](README.md#output-from-gazu-03-and-earlier)
+  for a `GAZU_CONFIG` that restores the previous output.
+- **Breaking**: The `flowchart.defaultRenderer`, `class.defaultRenderer` and
+  `state.defaultRenderer` config options are now ignored by mermaid.js. Use
+  the top-level `layout` option instead.
+- **Breaking**: The OS WebView must now be WebKitGTK 2.44+ on Linux or
+  Safari 17.4+ on macOS (mermaid.js 12 targets ES2024).
+- With the new defaults, rendering is somewhat slower and uses more memory.
+  On Linux x86_64, `util/bench/fixture.md` (3 diagrams) takes about 20%
+  longer than with 0.3.3 (median 1.07 s → 1.30 s, running the versions
+  alternately), and peak RSS is about 5% higher (541 MB → 566 MB). With the
+  `GAZU_CONFIG` above it is about 10% faster than 0.3.3 (0.96 s); the ELK
+  layout code is then never loaded.
+- The README's mermaid-filter comparison is re-measured for Linux with
+  0.4.0.
+
+### Fixed
+
+- Windows: rendering failed with WebView2 error 0x80070057 in every earlier
+  version (sekien#5). Fixed in sekien 0.5.1; gazu's integration tests now run
+  on the GitHub Actions Windows runner in CI. Not yet tried on a desktop
+  Windows machine.
+
 ## [0.3.3] — 2026-09-29
 
 ### Changed
@@ -90,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (same format as `mmdc --configFile`).
 - Prebuilt binaries for Linux x86_64, macOS arm64, and Windows x86_64.
 
-[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/olibrauma/gazu/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/olibrauma/gazu/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/olibrauma/gazu/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/olibrauma/gazu/compare/v0.3.0...v0.3.1

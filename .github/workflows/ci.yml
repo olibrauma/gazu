@@ -60,7 +60,7 @@ jobs:
           - os: macos-latest
             test_args: --locked
           - os: windows-latest
-            test_args: --locked --bin gazu
+            test_args: --locked
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
