@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated sekien to 0.5.2, which bundles mermaid.js 12.2.0 (matching
+  mermaid-cli 12.2.0). Some diagrams render differently:
+  - With the ELK layout (the default), an edge that feeds back into a
+    subgraph is now routed downstream instead of around the subgraph. Add
+    `"elk": { "orientFeedbackEdges": false }` to `GAZU_CONFIG` to keep the
+    previous routing.
+  - Circle and double-circle nodes are smaller, and ELK edge labels, class
+    diagram cardinalities, mindmap and xychart layouts are fixed upstream.
+
+  New mermaid syntax and options from 12.1 and 12.2 also work, e.g.
+  `bitOrder` for packet diagrams and `mindmap.colorBy: depth`. See
+  [sekien's changelog](https://github.com/olibrauma/sekien/blob/main/CHANGELOG.md#052---2026-11-03).
+
+### Fixed
+
+- If the WebView fails to load mermaid.js (e.g. one too old for its ES2024
+  code), gazu now exits 1 with "page failed to load: ..." instead of waiting
+  forever, so pandoc fails rather than hangs (fixed in sekien 0.5.2).
+
+### Security
+
+- Updated anyhow to 1.0.104 for RUSTSEC-2026-0190 (unsound
+  `Error::downcast_mut()`; gazu does not call it). Other dependencies in
+  `Cargo.lock` are updated to their latest Rust 1.88-compatible versions.
+
 ## [0.4.0] — 2026-10-01
 
 ### Changed
