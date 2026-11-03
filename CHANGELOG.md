@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   code), gazu now exits 1 with "page failed to load: ..." instead of waiting
   forever, so pandoc fails rather than hangs (fixed in sekien 0.5.2).
 
+### Security
+
+- Updated anyhow to 1.0.104 for RUSTSEC-2026-0190 (unsound
+  `Error::downcast_mut()`; gazu does not call it). Other dependencies in
+  `Cargo.lock` are updated to their latest Rust 1.88-compatible versions.
+
 ## [0.4.0] — 2026-10-01
 
 ### Changed
