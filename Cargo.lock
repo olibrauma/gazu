@@ -1648,9 +1648,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "sekien"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fa0f7b1e48f0ac193ca5fb972820df8a5677722a716a02ffefa10e5be0f3b0d"
+checksum = "20424e68bee121456fd66a9e26c30f3b93e7526075ce359fb7abd52881d085db"
 dependencies = [
  "anyhow",
  "serde",
