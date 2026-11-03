@@ -151,13 +151,13 @@ PATH to render the embedded SVG — without them, the PDF build fails. Use
 gazu is smaller, faster, and lighter than
 [mermaid-filter](https://github.com/raghur/mermaid-filter):
 
-**Linux x86_64** (gazu 0.4.0)
+**Linux x86_64** (gazu 0.4.1)
 
 | Metric | gazu | mermaid-filter | Advantage |
 |---|---|---|---|
 | Install size | **7.1 MB** | ~568 MB | **99% smaller** |
-| Speed (3 diagrams) | **~1.3 s** | ~7.9 s | **~6x faster** |
-| Memory (RSS) | **~566 MB** | ~855 MB | **~34% less** |
+| Speed (3 diagrams) | **~1.5 s** | ~8.4 s | **~6x faster** |
+| Memory (RSS) | **~563 MB** | ~854 MB | **~34% less** |
 
 **Apple Silicon (M-series)** (gazu 0.1.0, mermaid.js 11.14.0; not yet
 re-measured for 0.4)
@@ -171,9 +171,11 @@ mermaid-filter spawns `mmdc` (Puppeteer/Chromium) per block; gazu renders the
 whole document in one batch.
 
 - `util/bench/fixture.md` (3 diagrams) — see `./util/bench/bench.sh`
-- Linux: gazu 0.4.0 (mermaid.js 12.0.0) vs. mermaid-filter 1.4.7 (mmdc
+- Linux: gazu 0.4.1 (mermaid.js 12.2.0) vs. mermaid-filter 1.4.7 (mmdc
   10.9.1, mermaid.js 10.9.6). Speed is the median of 10 runs alternating
   between the two filters; RSS is the median of 10 runs of `bench.sh`.
+  The machine also runs other work, so read the figures as rough (0.4.0
+  gave ~1.3 s / ~7.9 s).
 - Speed/Memory: filter process + children (Xvfb, WebKit, mmdc, Chromium), not pandoc itself
 - Install size: gazu's binary vs. mermaid-filter's npm package + Puppeteer's Chromium download (Linux only)
 - On Apple Silicon, mermaid-filter's bundled Chromium runs under Rosetta 2 (no

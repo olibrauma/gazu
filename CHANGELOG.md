@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-11-03
+
 ### Changed
 
 - Updated sekien to 0.5.2, which bundles mermaid.js 12.2.0 (matching
@@ -33,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated anyhow to 1.0.104 for RUSTSEC-2026-0190 (unsound
   `Error::downcast_mut()`; gazu does not call it). Other dependencies in
   `Cargo.lock` are updated to their latest Rust 1.88-compatible versions.
+- The README's mermaid-filter comparison is re-measured for Linux with
+  0.4.1.
 
 ## [0.4.0] — 2026-10-01
 
@@ -154,7 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (same format as `mmdc --configFile`).
 - Prebuilt binaries for Linux x86_64, macOS arm64, and Windows x86_64.
 
-[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/olibrauma/gazu/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/olibrauma/gazu/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/olibrauma/gazu/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/olibrauma/gazu/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/olibrauma/gazu/compare/v0.3.1...v0.3.2
