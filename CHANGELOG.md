@@ -11,8 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated sekien to 0.5.2, which bundles mermaid.js 12.2.0 (matching
-  mermaid-cli 12.2.0). Some diagrams render differently:
+- Updated the bundled mermaid.js to 12.2.0 (matching mermaid-cli 12.2.0). Some diagrams render differently:
   - With the ELK layout (the default), an edge that feeds back into a
     subgraph is now routed downstream instead of around the subgraph. Add
     `"elk": { "orientFeedbackEdges": false }` to `GAZU_CONFIG` to keep the
@@ -21,14 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     diagram cardinalities, mindmap and xychart layouts are fixed upstream.
 
   New mermaid syntax and options from 12.1 and 12.2 also work, e.g.
-  `bitOrder` for packet diagrams and `mindmap.colorBy: depth`. See
-  [sekien's changelog](https://github.com/olibrauma/sekien/blob/main/CHANGELOG.md#052---2026-11-03).
+  `bitOrder` for packet diagrams and `mindmap.colorBy: depth`. See the
+  mermaid release notes for
+  [12.1.0](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%4012.1.0)
+  and [12.2.0](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%4012.2.0).
 
 ### Fixed
 
 - If the WebView fails to load mermaid.js (e.g. one too old for its ES2024
   code), gazu now exits 1 with "page failed to load: ..." instead of waiting
-  forever, so pandoc fails rather than hangs (fixed in sekien 0.5.2).
+  forever, so pandoc fails rather than hangs.
 
 ### Security
 
@@ -42,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Breaking**: Updated sekien to 0.5.1, which bundles mermaid.js 12.0.0
-  (matching mermaid-cli 12.0.0). The same document now renders differently
+- **Breaking**: Updated the bundled mermaid.js to 12.0.0 (matching
+  mermaid-cli 12.0.0). The same document now renders differently
   by default:
   - ELK layout instead of dagre (flowchart, state, class, ER, requirement
     and use case diagrams).
@@ -71,34 +72,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Windows: rendering failed with WebView2 error 0x80070057 in every earlier
-  version (sekien#5). Fixed in sekien 0.5.1; gazu's integration tests now run
-  on the GitHub Actions Windows runner in CI. Not yet tried on a desktop
+  version. gazu's integration tests now run on the GitHub Actions Windows
+  runner in CI. Not yet tried on a desktop
   Windows machine.
 
 ## [0.3.3] — 2026-09-29
 
 ### Changed
 
-- Updated sekien to 0.4.3 (mermaid.js unchanged at 11.17.2). It updates wry
-  to 0.57 and tao to 0.37, and no longer needs the libdbus development
-  headers to build.
-- If sekien's rendering window closes before every diagram is rendered, gazu
+- Updated wry to 0.57 and tao to 0.37 (mermaid.js unchanged at 11.17.2).
+  Building no longer needs the libdbus development headers.
+- If the rendering window closes before every diagram is rendered, gazu
   now exits with an error instead of leaving the remaining Mermaid blocks
-  unrendered without a warning (fixed in sekien 0.4.3).
-- Declared `rust-version = "1.88"`, the minimum required by sekien 0.4.3 and
-  gazu's other dependencies. Earlier versions declared none.
+  unrendered without a warning.
+- Declared `rust-version = "1.88"`, the minimum required by gazu's
+  dependencies. Earlier versions declared none.
 
 ## [0.3.2] — 2026-09-05
 
 ### Changed
 
-- Updated sekien to 0.4.2 (mermaid.js 11.17.2, matching mermaid-cli 11.17.0).
+- Updated the bundled mermaid.js to 11.17.2 (matching mermaid-cli 11.17.0).
 
 ## [0.3.1] — 2026-07-09
 
 ### Changed
 
-- Updated sekien to 0.4.1 (mermaid.js 11.16.0).
+- Updated the bundled mermaid.js to 11.16.0.
 
 ## [0.3.0] — 2026-06-17
 
@@ -110,10 +110,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated sekien to 0.4.0 (mermaid.js 11.15.0).
-- `GAZU_CONFIG` error messages now follow sekien's style. File-not-found:
+- Updated the bundled mermaid.js to 11.15.0.
+- New `GAZU_CONFIG` error messages. File not found:
   `failed to read GAZU_CONFIG '<path>': <os error>`. Invalid JSON or
-  non-object: reported by sekien as `invalid config_json: <detail>`.
+  non-object: `invalid config_json: <detail>`.
 
 ## [0.2.0] — 2026-06-17
 
@@ -130,14 +130,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Render failure warnings now print the Mermaid error on its own line, so
   multi-line errors (including source context and `^` pointer) display
   correctly.
-- Updated sekien to 0.3.2.
 
 ### Fixed
 
 - SVG output now includes proper `xmlns:xlink` declarations for namespaced
   attributes such as those produced by `click` directives. Previously, strict
   XML parsers (e.g. typst's usvg) would reject the file and fail the build.
-  (Fixed in sekien 0.3.1.)
 
 ## [0.1.0] — 2026-06-16
 

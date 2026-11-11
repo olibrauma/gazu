@@ -32,7 +32,7 @@ A display connection is required (uses the OS-native WebView: WKWebView /
 WebView2).
 
 On Windows, gazu 0.3 and earlier could not render at all (WebView2 error
-0x80070057, [sekien#5](https://github.com/olibrauma/sekien/issues/5)). gazu
+0x80070057). gazu
 0.4 renders on the GitHub Actions Windows runner, where its tests run in CI,
 but has not yet been tried on a desktop Windows machine.
 
@@ -194,7 +194,7 @@ at your option.
 
 ### Bundled Assets
 
-gazu embeds `mermaid.js` (via [sekien](https://github.com/olibrauma/sekien)).
+gazu embeds `mermaid.js`.
 
 - `mermaid.js`: Licensed under the [MIT License](mermaid.LICENSE). Copyright (c) 2014 - 2024 Knut Sveidqvist and contributors.
 
