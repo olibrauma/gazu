@@ -11,9 +11,18 @@ readme = "README.md"
 keywords = ["pandoc", "mermaid", "filter", "svg"]
 categories = ["command-line-utilities", "text-processing"]
 
+[lib]
+name = "gazu"
+path = "src/lib.rs"
+
 [[bin]]
 name = "gazu"
 path = "src/main.rs"
+
+[[test]]
+name = "library"
+path = "tests/library.rs"
+harness = false
 
 [dependencies]
 sekien = "0.5.2"

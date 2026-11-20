@@ -62,6 +62,61 @@ subdirectory of the current directory. See
 [Behavior by output format](#behavior-by-output-format). For PDF output, see
 [Notes → PDF output](#pdf-output).
 
+## Rust library usage
+
+`gazu` can be used directly as a Rust library in other projects without requiring CLI child processes, stdin/stdout piping, or configuration files on disk. Callers can pass Pandoc ASTs and Mermaid configuration objects directly in memory.
+
+Add it to your `Cargo.toml`:
+
+```toml
+[dependencies]
+gazu = "0.4"
+serde_json = "1"
+```
+
+### In-memory Pandoc AST filtering
+
+Pass your Pandoc AST directly as a `serde_json::Value` object and pass Mermaid configuration directly in memory:
+
+```rust
+use gazu::filter_ast_value_in_memory;
+use serde_json::json;
+
+let mut ast = json!({
+    "pandoc-api-version": [1, 23],
+    "meta": {},
+    "blocks": [
+        {
+            "t": "CodeBlock",
+            "c": [["", ["mermaid"], []], "graph LR\n  A --> B"]
+        }
+    ]
+});
+
+// Pass config directly as a serde_json::Value object (no GAZU_CONFIG file needed):
+let config = json!({ "theme": "dark" });
+
+// Process AST entirely in-memory (no files created on disk):
+let result = filter_ast_value_in_memory(&mut ast, "html", Some(&config))?;
+assert!(result.warnings.is_empty());
+```
+
+For non-HTML formats (like `typst` or `latex`), in-memory mode returns generated SVGs in `result.files` without writing anything to disk. If you prefer `gazu` to write files to disk, you can use `filter_ast_value`, or configure custom output locations and embedding modes using `FilterOptions`.
+
+### Direct diagram rendering
+
+You can also render Mermaid diagrams directly to SVG:
+
+```rust
+use gazu::{render_diagram, render_diagram_with_config, RenderOutcome};
+use serde_json::json;
+
+let outcome = render_diagram("graph LR\n  A --> B", None)?;
+if let RenderOutcome::Svg(svg) = outcome {
+    println!("{svg}");
+}
+```
+
 ## CLI options
 
 | Option | Description |
