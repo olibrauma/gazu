@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Library target (`[lib]`) allowing `gazu` to be used as a dependency in other Rust/Cargo projects:
+  - In-memory Pandoc AST filtering via `filter_ast`, `filter_ast_value`, and `filter_ast_with_options` operating directly on `serde_json::Value` objects without child processes or stdin/stdout piping.
+  - Direct configuration passing as `serde_json::Value` or JSON strings via the `IntoMermaidConfig` trait, eliminating the need to create a `GAZU_CONFIG` file.
+  - Pure in-memory image mode (`ImageMode::AutoInMemory` / `filter_ast_in_memory`) for non-HTML formats (such as Typst and LaTeX), returning planned SVG files in `FilterResult::files` without writing files or directories to disk.
+  - Custom file output directory support via `FilterOptions::with_output_dir` and `ImageMode::WriteFiles`.
+  - Direct diagram rendering functions (`render_diagram`, `render_diagram_with_config`, `render_diagrams`) to render Mermaid strings directly to SVG.
+  - Public AST inspection and construction utilities (`is_mermaid_block`, `collect_mermaid`, `collect_mermaid_mut`, `mermaid_source`, `make_raw_html_block`, `make_image_block`, `svg_filename`).
+
 ## [0.4.1] — 2026-11-03
 
 ### Changed

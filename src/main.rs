@@ -1,23 +1,5 @@
-mod filter;
-
 use anyhow::{Context, Result};
 use std::io::{self, IsTerminal, Read};
-
-fn usage() -> &'static str {
-    "gazu — Pandoc filter for Mermaid diagrams
-
-Usage:
-  pandoc input.md -o output.html --filter gazu
-  pandoc input.md -o output.pdf --pdf-engine=typst --filter gazu
-
-Options:
-  --version, -v          Show version
-  --help, -h             Show this help
-
-Environment:
-  GAZU_CONFIG             Path to a mermaid.initialize() JSON config file
-                          (same format as mmdc's --configFile)"
-}
 
 enum Command {
     Help,
@@ -47,14 +29,14 @@ fn resolve_command() -> Command {
 fn main() -> Result<()> {
     match resolve_command() {
         Command::Help => {
-            println!("{}", usage());
+            println!("{}", gazu::usage());
             Ok(())
         }
         Command::Version => {
             println!(
                 "gazu {} (mermaid.js {})",
-                env!("CARGO_PKG_VERSION"),
-                sekien::MERMAID_VERSION
+                gazu::VERSION,
+                gazu::MERMAID_VERSION
             );
             Ok(())
         }
@@ -72,7 +54,7 @@ fn main() -> Result<()> {
                 .read_to_string(&mut input)
                 .context("failed to read Pandoc AST from stdin")?;
 
-            filter::filter(&input, &format, config_json.as_deref())
+            gazu::filter(&input, &format, config_json.as_deref())
         }
     }
 }
